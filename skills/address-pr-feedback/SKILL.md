@@ -20,7 +20,7 @@ All direct GitHub API, comment, review, and PR metadata operations must use the 
 
 ## Find Target PRs
 
-Use the PR URL, PR number, or branch the user supplied. If none was supplied, use the PR for the checked-out branch:
+Use the PR URL, PR number, or branch the user supplied. If none was supplied, use the PR for the checked-out branch. Treat this as the anchor PR until stack discovery decides the final target set:
 
 ```bash
 gh pr view --json number,title,url,baseRefName,headRefName,headRefOid,state,isCrossRepository,maintainerCanModify,headRepository,headRepositoryOwner
@@ -28,18 +28,18 @@ gh pr view --json number,title,url,baseRefName,headRefName,headRefOid,state,isCr
 
 If no PR is found and the user did not supply one, stop and say there is no PR for the checked-out branch.
 
-For each target PR, load metadata:
+Load metadata for the anchor PR before stack discovery. After stack discovery, repeat this for every PR in the final target set:
 
 ```bash
 gh pr view <PR> --json number,title,url,baseRefName,headRefName,headRefOid,body,comments,reviews,author,state,isCrossRepository,maintainerCanModify,headRepository,headRepositoryOwner
 gh pr diff <PR>
 ```
 
-Before editing, verify the PR head branch is writable. For cross-repository PRs, require `maintainerCanModify == true` and a successful `gh pr checkout <PR>`; otherwise stop before edits and report that the branch cannot be updated. Make sure the local checkout is on the branch that should own the fix, or on a stack branch where the owning commit is reachable and can be amended safely. If the needed PR branch is not checked out locally, create it from the remote PR head with `gh pr checkout <PR>`. Do not apply fixes to whatever branch happened to be checked out.
+Before editing, verify every PR head branch that may receive a fix is writable. For cross-repository PRs, require `maintainerCanModify == true` and a successful `gh pr checkout <PR>`; otherwise stop before edits and report that the branch cannot be updated. Make sure the local checkout is on the branch that should own the fix, or on a stack branch where the owning commit is reachable and can be amended safely. If a needed PR branch is not checked out locally, create it from the remote PR head with `gh pr checkout <PR>`. Do not apply fixes to whatever branch happened to be checked out.
 
 ## Stacks
 
-Default to stack-aware behavior. If the PR belongs to a stack, gather feedback for the stack. If the user gives a specific PR in a stack, gather feedback for all PRs from the stack base through that PR.
+Default to stack-aware behavior. If the PR belongs to a stack, gather feedback for every open PR in the connected stack, ordered from the lowest ancestor through the highest descendant. This applies whether the user supplies a PR URL, PR number, branch, or relies on the current branch; treat the target PR as the anchor used to discover the full stack, not as a boundary.
 
 ### Graphite
 
@@ -50,11 +50,12 @@ command -v gt
 gt --no-interactive log short --stack
 ```
 
-Use Graphite only when the target PR's `headRefName` is present as an exact branch name in the Graphite-tracked stack. Do not use `gt` just because it is installed. If `gt` exists but the target branch is not tracked by Graphite, Graphite commands fail, Graphite auth/init is missing, or the target PR branch is absent from `gt --no-interactive log short --stack`, fall back to `gh`-based stack inference.
+Use Graphite only when the target PR's `headRefName` is present as an exact branch name in the Graphite-tracked stack. Treat that Graphite output as the complete tracked stack containing the target branch, then include every open PR whose `headRefName` exactly matches a branch in that stack. Do not use `gt` just because it is installed. If `gt` exists but the target branch is not tracked by Graphite, Graphite commands fail, Graphite auth/init is missing, or the target PR branch is absent from `gt --no-interactive log short --stack`, fall back to `gh`-based stack inference.
 
 When Graphite applies:
 
-- Use `gt --no-interactive log short --stack` to identify ancestors and descendants.
+- Use `gt --no-interactive log short --stack` to identify the complete tracked stack containing the target branch, including ancestors and descendants.
+- Map the stack branches to open PRs by `headRefName`, gather feedback for every mapped PR, and keep the PR order from lowest ancestor through highest descendant.
 - Use `gt --no-interactive restack --upstack` after amending a non-tip branch.
 - Use `gt --no-interactive submit --stack --update-only` to push the current branch and subsequent stack branches after fixes. If the installed Graphite version supports `--no-edit`, it may be added, but do not rely on it.
 - Prefer Graphite-native commit operations when they fit the change, such as `gt --no-interactive absorb` for staged fixes that should be amended into owning commits or `gt --no-interactive modify` for the current branch.
@@ -69,7 +70,7 @@ gh pr list --state open --head <branch> --json number,title,url,baseRefName,head
 gh pr list --state open --base <branch> --json number,title,url,baseRefName,headRefName,headRefOid,isCrossRepository,maintainerCanModify,headRepository,headRepositoryOwner
 ```
 
-Treat PR `B` as stacked on PR `A` when `B.baseRefName == A.headRefName`. Walk ancestors by looking up an open PR whose `headRefName` equals the current PR's `baseRefName`. Walk descendants by looking up open PRs whose `baseRefName` equals the current PR's `headRefName`. Use the broad `--limit 100` list as a cache, but run the targeted `--head`/`--base` lookups when the next stack link is not found there. For a supplied PR, include ancestors through that PR. For an inferred current-branch PR, include the whole connected stack.
+Treat PR `B` as stacked on PR `A` when `B.baseRefName == A.headRefName`. Starting from the target PR, walk ancestors by looking up an open PR whose `headRefName` equals the current PR's `baseRefName`, and walk descendants by looking up open PRs whose `baseRefName` equals the current PR's `headRefName`. Continue until no open PR exists in either direction, then combine ancestors, the target PR, and descendants into one ordered stack from base-most PR to tip-most PR. Use the broad `--limit 100` list as a cache, but run the targeted `--head`/`--base` lookups when the next stack link is not found there.
 
 `gh pr list --head` does not support `owner:branch` syntax. If multiple open PRs share the same `headRefName`, disambiguate with `headRepositoryOwner.login` and `headRepository.name`. If the owning repository is still ambiguous, stop instead of guessing the stack.
 
