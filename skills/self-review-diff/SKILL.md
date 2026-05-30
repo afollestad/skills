@@ -69,7 +69,7 @@ Review the changes for all of these categories:
 5. Dead or stale code, unused symbols, obsolete branches, duplicated helpers, stale TODOs, or code made unreachable by the changes.
 6. File-size pressure. Check whether changed files are becoming hard to maintain and whether new logic belongs in an existing local abstraction. Treat file splitting as higher-risk unless it is mechanical and clearly isolated.
 7. Missing test coverage, including unit, integration, snapshot, preview, fixture, migration, and regression coverage appropriate to the changed behavior.
-8. Missing useful comments or class documentation. Add comments only when they explain non-obvious intent, constraints, invariants, or tradeoffs.
+8. Missing useful comments or class/function/property documentation. Add inline comments only when they explain non-obvious intent, constraints, invariants, or tradeoffs.
 9. Missing or stale `AGENTS.md` guidance when the change reveals a durable workflow rule, repo convention, validation command, or pitfall future agents need.
 10. Lint warnings or errors. Use the smallest relevant lint or format check from repo guidance. Do not run broad lint tasks when local instructions forbid them.
 11. Accessibility issues in UI changes, including labels, roles, states, contrast, text scaling, focus order, keyboard/screen-reader navigation, hit targets, and motion sensitivity.
