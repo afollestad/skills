@@ -67,13 +67,13 @@ The user may skip submitting certain feedback by index (provided in part 3).
 
 Construct a JSON payload and submit all comments as a single review using `gh api` with `--input`.
 
-**Always write the JSON to a temp file** rather than piping via `echo` — comment bodies often contain single quotes, backticks, and other characters that break shell quoting:
+**Always write the JSON to a PR-specific temp file** rather than piping via `echo` — comment bodies often contain single quotes, backticks, and other characters that break shell quoting. Use the actual PR number as the suffix for every temp JSON file created, such as `/tmp/pr_review_{number}.json` and `/tmp/pr_file_comment_{number}.json` after replacing `{number}` with the PR number. For example, PR 123 should use `/tmp/pr_review_123.json` and `/tmp/pr_file_comment_123.json`. Do not use shared names like `/tmp/pr_review.json` or `/tmp/pr_file_comment.json`, because concurrent reviews can overwrite each other's payloads.
 
 ```bash
-cat <<'PAYLOAD' > /tmp/pr_review.json
+cat <<'PAYLOAD' > /tmp/pr_review_{number}.json
 <json_payload>
 PAYLOAD
-gh api repos/{owner}/{repo}/pulls/{number}/reviews --method POST --input /tmp/pr_review.json
+gh api repos/{owner}/{repo}/pulls/{number}/reviews --method POST --input /tmp/pr_review_{number}.json
 ```
 
 JSON payload format:
@@ -109,7 +109,7 @@ For the review body/summary, leave it **empty** (`"body": ""`). Do not include s
 **Handling lines between diff hunks:** If a comment targets a line that falls between diff hunks (i.e. it's unchanged code not shown as context in any hunk), the `line`-based review comment will be rejected with a 422 error. In this case, submit that comment separately as a **file-level comment** using the individual comment endpoint:
 
 ```bash
-cat <<'PAYLOAD' > /tmp/pr_file_comment.json
+cat <<'PAYLOAD' > /tmp/pr_file_comment_{number}.json
 {
   "body": "**[P2]** Comment text here",
   "path": "relative/file/path.ext",
@@ -117,7 +117,7 @@ cat <<'PAYLOAD' > /tmp/pr_file_comment.json
   "commit_id": "<head_commit_sha>"
 }
 PAYLOAD
-gh api repos/{owner}/{repo}/pulls/{number}/comments --method POST --input /tmp/pr_file_comment.json
+gh api repos/{owner}/{repo}/pulls/{number}/comments --method POST --input /tmp/pr_file_comment_{number}.json
 ```
 
 Get the head commit SHA from `gh pr view <PR> --json headRefOid --jq '.headRefOid'`. Reference the specific line number in the comment body so the author knows where to look. **Never combine multiple comments into a single comment body to work around this limitation** — always submit each finding as its own comment.
