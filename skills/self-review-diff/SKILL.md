@@ -8,7 +8,8 @@ description: |
   or another pass over local changes, or when asked to inspect local diffs,
   staged changes, unstaged changes, or untracked files for bugs, regressions,
   missing tests, lint, accessibility, stale code, or similar issues. The workflow
-  loops after automatic or confirmed fixes until a clean pass remains.
+  loops after automatic or confirmed fixes until two consecutive clean passes
+  verify that nothing remains to fix or report.
 compatibility: Requires git. Optionally uses gt for Graphite-managed stacks. Uses repo-specific lint and test tools discovered from local guidance.
 argument-hint: "[optional focus area]"
 ---
@@ -119,7 +120,11 @@ After automatic low-risk fixes or user-confirmed higher-risk fixes, run the smal
 
 After validating any automatic low-risk fix or user-confirmed higher-risk fix, restart this workflow from [Prerequisites](#prerequisites) against the updated local change set. Do not require the user to ask for another pass.
 
-Repeat the audit, fix, and validation cycle until one full pass finds no low-risk fixes to apply and no higher-risk findings that need confirmation. Only move on to commit or amend decisions after that clean pass, unless the user explicitly requested a different commit timing.
+A clean pass means the prerequisites, changed-file inspection, relevant searches, full audit checklist, and validation all ran against the current worktree, with no low-risk fixes applied and no higher-risk findings needing confirmation.
+
+Repeat the audit, fix, and validation cycle until two consecutive clean passes complete. After the first clean pass, immediately run a fresh confirmation pass from [Prerequisites](#prerequisites) against the current worktree. For the confirmation pass, rerun the prerequisite commands, re-read the final contents of changed tracked files and relevant untracked files, redo the relevant searches, and do not rely on earlier command output or remembered conclusions. Only move on to commit or amend decisions after the second consecutive clean pass, unless the user explicitly requested a different commit timing.
+
+If the confirmation pass finds a low-risk fix or a higher-risk finding, handle it under the normal fix policy, reset the consecutive clean-pass count, and restart from [Prerequisites](#prerequisites) after any validation. Do not report the loop as clean until two consecutive clean passes have completed after the most recent fix or finding.
 
 If a pass finds higher-risk findings, pause for confirmation before fixing them. After applying and validating confirmed fixes, restart from [Prerequisites](#prerequisites). If the user declines or defers a higher-risk fix, stop the loop and include the remaining finding in the final report instead of repeatedly asking about it.
 
@@ -156,7 +161,7 @@ Needs confirmation:
 - <finding, risk, and recommended fix, or "None">
 
 Passes:
-- <number of audit passes completed; say whether the final pass was clean or why the loop stopped>
+- <number of audit passes completed; say whether two consecutive clean passes completed or why the loop stopped>
 
 Validation:
 - <checks run and result>
