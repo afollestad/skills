@@ -77,12 +77,12 @@ Treat PR `B` as stacked on PR `A` when `B.baseRefName == A.headRefName`. Walk an
 
 Ignore already-resolved feedback before analysis:
 
-- Skip review threads where `isResolved == true` for feedback analysis, but keep their node data for the bot minimization cleanup pass. A resolved review thread can still keep a bot review block visible in GitHub until the bot's review comments and review summary are minimized.
+- Skip review threads where `isResolved == true` for feedback analysis, but keep their node data for the bot minimization cleanup pass. Use resolved thread comments only to identify the associated bot-authored `PullRequestReview` summary that may need minimizing; do not minimize individual `PullRequestReviewComment` nodes inside review threads as resolved-thread cleanup.
 - Skip minimized or hidden reviews/comments where GraphQL exposes `isMinimized == true`.
 - Skip dismissed reviews, review entries with empty bodies, and review-thread comments whose GraphQL `state` is not `SUBMITTED`.
 - Treat review-thread comments with `outdated == true` as obsolete unless a newer unresolved comment in the same thread keeps the issue current.
 
-Keep separate collections for actionable feedback and hide/minimize cleanup candidates. Actionable feedback excludes already-resolved threads. Cleanup candidates may include resolved threads, outdated bot comments, and bot review summaries when the feedback is already addressed, replied to, invalid, obsolete, duplicate, blocked, or too risky to address.
+Keep separate collections for actionable feedback and hide/minimize cleanup candidates. Actionable feedback excludes already-resolved threads. Cleanup candidates may include top-level bot comments, resolved threads as sources for their associated bot review summaries, and bot review summaries when the feedback is already addressed, replied to, invalid, obsolete, duplicate, blocked, or too risky to address.
 
 When GraphQL returns an `author`, request `author { __typename login }`. Treat the author as confidently automated for hiding only when `author.__typename == "Bot"`. For REST issue comments, continue using `user.type == "Bot"`.
 
@@ -321,12 +321,12 @@ If `user.type` or `author.__typename` is missing or ambiguous, do not hide the c
 
 Also minimize eligible bot-authored review nodes after their feedback has been considered:
 
-- Minimize the original `PullRequestReviewComment` nodes in every considered thread when `viewerCanMinimize == true` and the author is confidently automated.
 - Minimize the bot-authored `PullRequestReview` summary node when `viewerCanMinimize == true`, the review body has been considered or only contains boilerplate for the considered review comments, and none of that bot review's current comments remain unresolved/actionable.
-- If a previous run already resolved the thread but left the bot review visible, use the cleanup candidates to minimize eligible bot `PullRequestReviewComment` nodes and the associated bot `PullRequestReview` without posting duplicate replies.
-- This matters for GitHub's conversation UI: resolving review threads alone can still leave the bot's review block visible with collapsed "Show resolved" rows. Minimizing the bot's review comments plus the review summary hides the whole addressed bot-review block when GitHub permissions allow it.
+- Do not minimize individual `PullRequestReviewComment` nodes inside review threads during routine cleanup, even when they are bot-authored and `viewerCanMinimize == true`. Minimizing those inline comments creates nested "This comment was marked as resolved" / "Show comment" rows inside an otherwise resolved conversation.
+- If a previous run already resolved the thread but left the bot review visible, use the cleanup candidates to minimize only the associated bot `PullRequestReview` summary without posting duplicate replies.
+- This matters for GitHub's conversation UI: resolving review threads alone can still leave the bot's review block visible with collapsed "Show resolved" rows. Minimizing the top-level bot review summary hides the addressed bot-review group when GitHub permissions allow it, while leaving individual comments inside resolved threads readable.
 
-Minimize eligible top-level comments, review bodies, and review comments with GraphQL:
+Minimize eligible top-level comments and review bodies with GraphQL:
 
 ```bash
 gh api graphql -f query='
@@ -337,6 +337,6 @@ mutation($subjectId: ID!) {
 }' -F subjectId=<comment-node-id>
 ```
 
-Use the REST issue comment's `node_id`, the `PullRequestReview.id`, or the `PullRequestReviewComment.id` as `subjectId`; do not use the numeric database ID.
+Use the REST issue comment's `node_id` or the `PullRequestReview.id` as `subjectId`; do not use the numeric database ID. Do not use a `PullRequestReviewComment.id` for routine resolved-thread cleanup.
 
 Return a concise final report with the PRs handled, what changed, what was pushed, what was resolved or left open, and which checks ran.
