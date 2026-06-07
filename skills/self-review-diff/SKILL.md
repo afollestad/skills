@@ -70,7 +70,7 @@ Review the changes for all of these categories:
 5. Dead or stale code, unused symbols, obsolete branches, duplicated helpers, stale TODOs, or code made unreachable by the changes.
 6. File-size pressure. Check whether changed files are becoming hard to maintain and whether new logic belongs in an existing local abstraction. Treat file splitting as higher-risk unless it is mechanical and clearly isolated.
 7. Missing test coverage, including unit, integration, snapshot, preview, fixture, migration, and regression coverage appropriate to the changed behavior.
-8. Missing useful comments or class/function/property documentation. Add inline comments only when they explain non-obvious intent, constraints, invariants, or tradeoffs.
+8. Missing useful comments or class/function/property documentation. Add inline comments only when they explain non-obvious intent, constraints, invariants, or tradeoffs. Tests, scoped docs, and `AGENTS.md` guidance do not replace a short local comment when changed code has a surprising invariant that future readers would otherwise need to infer.
 9. Missing or stale `AGENTS.md` guidance when the change reveals a durable workflow rule, repo convention, validation command, or pitfall future agents need.
 10. Lint warnings or errors. Use the smallest relevant lint or format check from repo guidance. Do not run broad lint tasks when local instructions forbid them.
 11. Accessibility issues in UI changes, including labels, roles, states, contrast, text scaling, focus order, keyboard/screen-reader navigation, hit targets, and motion sensitivity.
@@ -84,7 +84,7 @@ Automatically fix findings only when the fix is low risk and clearly correct:
 - Small missing tests that directly cover changed behavior using existing test helpers, fixtures, and patterns without changing production semantics.
 - Straightforward accessibility labels, hints, or state metadata omissions in newly changed UI when the intended semantics are obvious from visible text or existing nearby patterns.
 - Trivial private stale code removal when static references prove it is unused and removal cannot affect public API, generated contracts, resources, serialization, dependency injection, reflection, or entrypoints.
-- Clarifying comments for non-obvious changed logic when the invariant or constraint is directly supported by nearby code, tests, or local documentation.
+- Clarifying comments for non-obvious changed logic when the invariant or constraint is directly supported by nearby code, tests, or local documentation. Treat these as low-risk fixes even when tests or scoped docs already cover the behavior, because the comment belongs at the point where the invariant can be misread.
 
 Ask for confirmation before fixing higher-risk findings:
 
