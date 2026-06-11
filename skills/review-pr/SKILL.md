@@ -1,5 +1,6 @@
 ---
 name: review-pr
+effort: xhigh
 description: Review a PR and submit suggestions as comments, along with an optional approval/request for changes.
 compatibility: Requires git, gh, jq, and internet access.
 argument-hint: "[PR URL]"
@@ -24,17 +25,22 @@ Use when: reviewing, evaluating, critiquing, auditing, or assessing a GitHub PR.
 Use `gh` CLI to get the full diff and PR metadata:
 
 ```bash
-gh pr view <PR> --json number,title,body,baseRefName,headRefName
+gh pr view <PR> --json number,title,body,baseRefName,headRefName,headRefOid,comments,reviews
 gh pr diff <PR>
+gh api repos/{owner}/{repo}/issues/{number}/comments --paginate
+gh api repos/{owner}/{repo}/pulls/{number}/comments --paginate
 ```
 
 If the user provides a URL, extract the repo and PR number from it. For private repos, always use `gh` CLI rather than fetching URLs directly.
+
+Also inspect existing top-level comments, review bodies, and inline review comments before generating findings. Use that existing feedback to identify issues that have already been raised, including equivalent feedback phrased differently.
 
 ### 2. Analyze the entire diff
 
 - Read the **complete diff**, not just individual chunks. Understand the full scope of changes.
 - Consider how changes across multiple files relate to each other.
 - Check for correctness, security, performance, readability, and maintainability.
+- Compare every candidate finding against existing PR feedback. If the same issue or suggestion has already been raised, do not include it in the proposed feedback and do not post it again.
 - **Do not include fluff, praise, or "LGTM"-style commentary.** Only include actionable findings: critical issues (P0/P1) and nits (P2/P3). Every comment must point to a specific problem or concrete suggestion. Comments that merely note something is "a good change" or compliment the author are not actionable — omit them entirely.
 
 ### 3. Generate prioritized comments
@@ -46,7 +52,7 @@ Organize all findings into priority levels:
 - **P2 — Suggestion:** Code style improvements, better naming, minor refactors, documentation gaps.
 - **P3 — Nit:** Trivial style preferences, optional improvements, minor observations.
 
-Before finalizing, review all findings — including P3 nits — and deliberately decide whether each is worth including. Do not silently drop nits; either include them or note that they were considered and omitted. Try to frame feedback as questions.
+Before finalizing, review all findings — including P3 nits — and deliberately decide whether each is worth including. Do not silently drop nits; either include them or note that they were considered and omitted. Explicitly omit duplicative findings that are already covered by existing PR feedback, and do not assign them an index. Try to frame feedback as questions.
 
 **Present the full list of comments to the user, grouped and sorted by priority, before submitting.** Each comment should include:
 - An index of the feedback to be used in step 4 below.

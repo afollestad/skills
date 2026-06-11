@@ -1,5 +1,6 @@
 ---
 name: self-review-diff
+effort: xhigh
 description: |
   Self-review, self review, self-reviewing, audit, check, or fix the current
   uncommitted Git diff or other uncommitted local Git changes before a commit or

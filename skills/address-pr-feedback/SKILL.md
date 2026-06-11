@@ -1,5 +1,6 @@
 ---
 name: address-pr-feedback
+effort: xhigh
 description: |
   Address, fix, respond to, or resolve GitHub pull request feedback. Use when
   the user asks to handle PR review comments, or address feedback on PRs.
