@@ -278,7 +278,7 @@ For review threads with multiple comments, evaluate each unresolved comment but 
 
 Before posting, check existing PR comments and review-thread replies by the authenticated user. Do not post a duplicate reply if a prior reply already references the same original comment or thread and no new feedback has appeared since that reply.
 
-For review threads, reply in the thread only when `viewerCanReply == true`. If `viewerCanReply == false`, do not attempt the mutation; report that the thread could not be replied to.
+For review threads, reply in the thread only when `viewerCanReply == true`. If `viewerCanReply == false`, do not attempt the mutation; report that the thread could not be replied to. GitHub can create review-thread replies as comments in a pending `PullRequestReview`; always capture the returned review state and submit any pending review before resolving the thread or reporting the reply as posted. If the reply is pending but the response does not identify exactly one pending review to submit, stop and report that the thread reply was left pending instead of resolving the thread.
 
 ```bash
 cat <<'REPLY' > /tmp/pr-feedback-reply.md
@@ -287,10 +287,50 @@ REPLY
 gh api graphql -f query='
 mutation($threadId: ID!, $body: String!) {
   addPullRequestReviewThreadReply(input: {pullRequestReviewThreadId: $threadId, body: $body}) {
-    comment { url }
+    comment {
+      id
+      url
+      state
+      pullRequestReview {
+        id
+        state
+        url
+      }
+    }
   }
-}' -F threadId=<thread-id> -F body=@/tmp/pr-feedback-reply.md
+}' -F threadId=<thread-id> -F body=@/tmp/pr-feedback-reply.md \
+  | tee /tmp/pr-feedback-thread-reply.json
+
+reply_state=$(jq -r '.data.addPullRequestReviewThreadReply.comment.state // empty' /tmp/pr-feedback-thread-reply.json)
+review_state=$(jq -r '.data.addPullRequestReviewThreadReply.comment.pullRequestReview.state // empty' /tmp/pr-feedback-thread-reply.json)
+pending_review_id=$(jq -r '.data.addPullRequestReviewThreadReply.comment.pullRequestReview.id // empty' /tmp/pr-feedback-thread-reply.json)
+jq -e '
+  .data.addPullRequestReviewThreadReply.comment.state == "SUBMITTED"
+  or .data.addPullRequestReviewThreadReply.comment.state == "PENDING"
+  or .data.addPullRequestReviewThreadReply.comment.pullRequestReview.state == "PENDING"
+' /tmp/pr-feedback-thread-reply.json >/dev/null || exit 1
+
+if [ "$reply_state" = "PENDING" ] || [ "$review_state" = "PENDING" ]; then
+  if [ -z "$pending_review_id" ]; then
+    echo "Thread reply is pending, but no pending review id was returned." >&2
+    exit 1
+  fi
+
+  gh api graphql -f query='
+  mutation($reviewId: ID!) {
+    submitPullRequestReview(input: {pullRequestReviewId: $reviewId, event: COMMENT}) {
+      pullRequestReview {
+        id
+        state
+        url
+      }
+    }
+  }' -F reviewId="$pending_review_id" | tee /tmp/pr-feedback-submit-review.json
+  jq -e '.data.submitPullRequestReview.pullRequestReview.state == "COMMENTED"' /tmp/pr-feedback-submit-review.json >/dev/null || exit 1
+fi
 ```
+
+Only treat the thread reply as posted when the reply comment state is `SUBMITTED` or the pending review submit response returns `state == "COMMENTED"`. If submission fails, do not resolve or minimize the associated feedback; report the pending review URL when available.
 
 For top-level PR comments or review bodies, GitHub comments are flat. Add a new PR comment that references the original comment/review URL or author:
 
