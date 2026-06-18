@@ -47,7 +47,11 @@ Before editing, verify the PR head branch is writable. For cross-repository PRs,
 
 ## Stacks
 
-Default to stack-aware behavior. If the PR belongs to a stack, gather feedback for the stack. If the user gives a specific PR in a stack, gather feedback for all PRs from the stack base through that PR. Always identify future/upstack PRs too, even when they are outside the actionable feedback range, because they may already address feedback on the target PR.
+Default to stack-aware behavior. If the PR belongs to a stack, gather feedback for the stack.
+
+**When the user gives a specific PR in a stack, prominently say: "Addressing stack feedback starting with [PR]", replacing `[PR]` with the supplied PR number, URL, or branch. Then address feedback in the supplied PR first, and continue one by one through each subsequent/upstack PR until the stack tip. Do not start by addressing ancestors/downstack PRs.**
+
+Always identify previous/downstack PRs for behavior and ownership context. Always identify future/upstack PRs too, because they may already address feedback on the current PR being evaluated.
 
 ### Graphite
 
@@ -78,7 +82,7 @@ gh pr list --state open --head <branch> --json number,title,url,baseRefName,head
 gh pr list --state open --base <branch> --json number,title,url,baseRefName,headRefName,headRefOid,isCrossRepository,maintainerCanModify,headRepository,headRepositoryOwner
 ```
 
-Treat PR `B` as stacked on PR `A` when `B.baseRefName == A.headRefName`. Walk ancestors by looking up an open PR whose `headRefName` equals the current PR's `baseRefName`. Walk descendants by looking up open PRs whose `baseRefName` equals the current PR's `headRefName`. Use the broad `--limit 100` list as a cache, but run the targeted `--head`/`--base` lookups when the next stack link is not found there. For a supplied PR, include ancestors through that PR. For an inferred current-branch PR, include the whole connected stack.
+Treat PR `B` as stacked on PR `A` when `B.baseRefName == A.headRefName`. Walk ancestors by looking up an open PR whose `headRefName` equals the current PR's `baseRefName`. Walk descendants by looking up open PRs whose `baseRefName` equals the current PR's `headRefName`. Use the broad `--limit 100` list as a cache, but run the targeted `--head`/`--base` lookups when the next stack link is not found there. For a supplied PR, make the actionable sequence the supplied PR followed by each descendant/upstack PR in order; keep ancestors as context only unless the user explicitly asks to address them. For an inferred current-branch PR, include the whole connected stack.
 
 `gh pr list --head` does not support `owner:branch` syntax. If multiple open PRs share the same `headRefName`, disambiguate with `headRepositoryOwner.login` and `headRepository.name`. If the owning repository is still ambiguous, stop instead of guessing the stack.
 
