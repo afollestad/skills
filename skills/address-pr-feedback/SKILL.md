@@ -91,14 +91,16 @@ gh pr diff <future-pr>
 
 ## Gather Feedback
 
-Ignore already-resolved feedback before analysis:
+Filter feedback before analysis:
 
-- Skip review threads where `isResolved == true` for feedback analysis, but keep their node data for the bot minimization cleanup pass. Use resolved thread comments only to identify the associated bot-authored `PullRequestReview` summary that may need minimizing; do not minimize individual `PullRequestReviewComment` nodes inside review threads as resolved-thread cleanup.
+- Treat resolved review threads as hidden conversations, not automatically finished work. Inspect their submitted, non-minimized comments for new feedback before using them only for cleanup.
+- For each resolved/hidden thread, sort comments by `createdAt`. Find the latest submitted comment by the authenticated GitHub login in that thread. Any later submitted, non-minimized comment by another author is new hidden-thread feedback and belongs in actionable feedback unless it is obsolete, duplicate, blocked, or risky. If there is no authenticated-user reply in the thread, inspect the latest submitted non-self comment as potentially actionable instead of assuming `isResolved == true` means it was handled.
+- If a resolved/hidden thread has no new non-self submitted comment after the latest authenticated-user reply, keep it only for the bot minimization cleanup pass. Use those resolved thread comments only to identify the associated bot-authored `PullRequestReview` summary that may need minimizing; do not minimize individual `PullRequestReviewComment` nodes inside review threads as resolved-thread cleanup.
 - Skip minimized or hidden reviews/comments where GraphQL exposes `isMinimized == true`.
 - Skip dismissed reviews, review entries with empty bodies, and review-thread comments whose GraphQL `state` is not `SUBMITTED`.
-- Treat review-thread comments with `outdated == true` as obsolete unless a newer unresolved comment in the same thread keeps the issue current.
+- Treat review-thread comments with `outdated == true` as obsolete unless a newer actionable comment in the same thread keeps the issue current.
 
-Keep separate collections for actionable feedback and hide/minimize cleanup candidates. Actionable feedback excludes already-resolved threads. Cleanup candidates may include top-level bot comments, resolved threads as sources for their associated bot review summaries, and bot review summaries when the feedback is already addressed, replied to, invalid, obsolete, duplicate, blocked, or too risky to address.
+Keep separate collections for actionable feedback and hide/minimize cleanup candidates. Actionable feedback includes unresolved threads plus resolved/hidden threads with new hidden-thread feedback. Resolved/hidden threads with no new feedback remain cleanup candidates only. Cleanup candidates may include top-level bot comments, resolved threads as sources for their associated bot review summaries, and bot review summaries when the feedback is already addressed, replied to, invalid, obsolete, duplicate, blocked, or too risky to address.
 
 When GraphQL returns an `author`, request `author { __typename login }`. Treat the author as confidently automated for hiding only when `author.__typename == "Bot"`. For REST issue comments, continue using `user.type == "Bot"`.
 
@@ -158,7 +160,7 @@ query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
 }'
 ```
 
-Gather review threads with GraphQL. Use unresolved threads for actionable feedback, and keep resolved threads available for the bot minimization cleanup pass:
+Gather review threads with GraphQL. Use unresolved threads for actionable feedback, and also scan resolved/hidden threads for new feedback before classifying them as cleanup-only:
 
 ```bash
 gh api graphql --paginate -F owner='{owner}' -F name='{repo}' -F number=<number> -f query='
@@ -254,6 +256,7 @@ For every remaining item, decide and record these answers before editing:
 - Whether a future/upstack PR already fixes, supersedes, or intentionally changes the requested behavior.
 - Which PR and commit should own the fix.
 - Whether it is duplicate, obsolete, blocked, or risky.
+- If it came from a resolved/hidden thread, whether it is newer than the latest authenticated-user reply or otherwise genuinely unhandled.
 
 Address valid and addressable feedback only after proving the change will not regress intentional behavior and is not already covered by a future stack PR. Do not make requested changes that would introduce regressions; reply with the reason instead. Do not address feedback that a future/upstack PR already covers; reply with the future PR number or branch instead.
 
@@ -293,9 +296,9 @@ Reply to every considered feedback item, whether addressed or not. Keep replies 
 - Risky: state the regression concern.
 - Already covered by future PR: state the future PR number or branch that covers it.
 
-For review threads with multiple comments, evaluate each unresolved comment but prefer one consolidated thread reply that covers all considered points in that thread.
+For review threads with multiple comments, evaluate each unresolved comment and any new hidden-thread feedback, but prefer one consolidated thread reply that covers all considered points in that thread.
 
-Before posting, check existing PR comments and review-thread replies by the authenticated user. Do not post a duplicate reply if a prior reply already references the same original comment or thread and no new feedback has appeared since that reply.
+Before posting, check existing PR comments and review-thread replies by the authenticated user. Do not post a duplicate reply if a prior reply already references the same original comment or thread and no new feedback has appeared since that reply. In resolved/hidden threads, a non-self submitted comment newer than the authenticated user's latest reply is new feedback, so the earlier reply does not make the new comment a duplicate.
 
 For review threads, reply in the thread only when `viewerCanReply == true`. If `viewerCanReply == false`, do not attempt the mutation; report that the thread could not be replied to. GitHub can create review-thread replies as comments in a pending `PullRequestReview`; always capture the returned review state and submit any pending review before resolving the thread or reporting the reply as posted. If the reply is pending but the response does not identify exactly one pending review to submit, stop and report that the thread reply was left pending instead of resolving the thread.
 
@@ -360,7 +363,7 @@ REPLY
 gh pr comment <PR> --body-file /tmp/pr-feedback-reply.md
 ```
 
-After replying, resolve every considered review thread with GraphQL when `viewerCanResolve == true`, including threads where the feedback was invalid, obsolete, duplicate, blocked, or too risky to address. Leave a thread unresolved only if `viewerCanResolve == false`, the API refuses the action, permissions are missing, or the user explicitly asked to keep it open.
+After replying, ensure every considered review thread is resolved, including threads where the feedback was invalid, obsolete, duplicate, blocked, or too risky to address. For threads currently unresolved, resolve with GraphQL when `viewerCanResolve == true`. For threads already resolved/hidden, keep them resolved and call `resolveReviewThread` only if a reply or refreshed thread state shows GitHub reopened the thread. Leave a thread unresolved only if `viewerCanResolve == false`, the API refuses the action, permissions are missing, or the user explicitly asked to keep it open.
 
 ```bash
 gh api graphql -f query='
