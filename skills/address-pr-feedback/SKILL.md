@@ -12,6 +12,13 @@ This is a mutating workflow. You may edit files, rewrite commits, push branches,
 
 All direct GitHub API, comment, review, and PR metadata operations must use the `gh` CLI. Do not use `curl`, direct API URLs outside `gh api`, or web fetching. When Graphite applies, `gt` may be used for stack-aware restacking and submission.
 
+## Non-Skippable Guardrails
+
+Before making code changes, every feedback item must pass both gates below. Do not skip these checks just because the reviewer suggestion is small, mechanical, or bot-authored.
+
+- Preserve intentional behavior. Identify the behavior the current PR, previous/downstack PRs, existing tests, product requirements, and surrounding code are intentionally protecting. Do not implement a reviewer suggestion if it would remove, narrow, or break that behavior. If feedback is valid but the suggested fix would regress intentional behavior, choose a fix that preserves the behavior; if no such fix is clear, do not change the code and reply with the regression concern.
+- Skip feedback already addressed by a future stack PR. When the target PR is in a stack, inspect future/upstack PRs before editing. If a later PR in the stack already fixes, supersedes, or intentionally changes the requested behavior, do not duplicate or backport that change into the current PR unless the user explicitly asks. Reply that the feedback is covered by the future PR, include the PR number or branch when available, and resolve the thread when permitted.
+
 ## Prerequisites
 
 - Run `gh auth status`. If authentication fails, stop and tell the user to run `gh auth login`.
@@ -40,7 +47,7 @@ Before editing, verify the PR head branch is writable. For cross-repository PRs,
 
 ## Stacks
 
-Default to stack-aware behavior. If the PR belongs to a stack, gather feedback for the stack. If the user gives a specific PR in a stack, gather feedback for all PRs from the stack base through that PR.
+Default to stack-aware behavior. If the PR belongs to a stack, gather feedback for the stack. If the user gives a specific PR in a stack, gather feedback for all PRs from the stack base through that PR. Always identify future/upstack PRs too, even when they are outside the actionable feedback range, because they may already address feedback on the target PR.
 
 ### Graphite
 
@@ -56,6 +63,7 @@ Use Graphite only when the target PR's `headRefName` is present as an exact bran
 When Graphite applies:
 
 - Use `gt --no-interactive log short --stack` to identify ancestors and descendants.
+- Record the descendant/upstack PRs and branches so you can skip feedback that a future PR already covers.
 - Use `gt --no-interactive restack --upstack` after amending a non-tip branch.
 - Use `gt --no-interactive submit --stack --update-only` to push the current branch and subsequent stack branches after fixes. If the installed Graphite version supports `--no-edit`, it may be added, but do not rely on it.
 - Prefer Graphite-native commit operations when they fit the change, such as `gt --no-interactive absorb` for staged fixes that should be amended into owning commits or `gt --no-interactive modify` for the current branch.
@@ -73,6 +81,13 @@ gh pr list --state open --base <branch> --json number,title,url,baseRefName,head
 Treat PR `B` as stacked on PR `A` when `B.baseRefName == A.headRefName`. Walk ancestors by looking up an open PR whose `headRefName` equals the current PR's `baseRefName`. Walk descendants by looking up open PRs whose `baseRefName` equals the current PR's `headRefName`. Use the broad `--limit 100` list as a cache, but run the targeted `--head`/`--base` lookups when the next stack link is not found there. For a supplied PR, include ancestors through that PR. For an inferred current-branch PR, include the whole connected stack.
 
 `gh pr list --head` does not support `owner:branch` syntax. If multiple open PRs share the same `headRefName`, disambiguate with `headRepositoryOwner.login` and `headRepository.name`. If the owning repository is still ambiguous, stop instead of guessing the stack.
+
+For any future/upstack PRs you identify, load enough metadata and diff context to decide whether they already address the feedback on the current/downstack PR:
+
+```bash
+gh pr view <future-pr> --json number,title,url,baseRefName,headRefName,headRefOid,body,author,state
+gh pr diff <future-pr>
+```
 
 ## Gather Feedback
 
@@ -230,15 +245,17 @@ query($threadId: ID!, $endCursor: String) {
 
 ## Evaluate Feedback
 
-For every remaining item, decide and record:
+For every remaining item, decide and record these answers before editing:
 
 - Whether it is valid.
 - Whether it is addressable now.
-- Whether addressing it could regress behavior in the current PR or any previous/downstack PR.
+- Which intentional behavior in the current PR, previous/downstack PRs, existing tests, product requirements, and surrounding code must be preserved.
+- Whether the requested change, or the obvious implementation of it, could regress intentional behavior in the current PR or any previous/downstack PR.
+- Whether a future/upstack PR already fixes, supersedes, or intentionally changes the requested behavior.
 - Which PR and commit should own the fix.
 - Whether it is duplicate, obsolete, blocked, or risky.
 
-Address valid and addressable feedback. Do not make requested changes that would introduce regressions; reply with the reason instead.
+Address valid and addressable feedback only after proving the change will not regress intentional behavior and is not already covered by a future stack PR. Do not make requested changes that would introduce regressions; reply with the reason instead. Do not address feedback that a future/upstack PR already covers; reply with the future PR number or branch instead.
 
 ## Amend Fixes
 
@@ -246,6 +263,7 @@ Unless the user says otherwise, amend fixes into the relevant existing commit.
 
 - Use the PR diff and commit history to find the owning commit.
 - For stack feedback, apply each fix from the branch that owns the relevant commit. Start from the lowest affected branch, then restack descendants before moving upward.
+- Do not backport or duplicate a fix from a future/upstack PR unless the user explicitly asks or the current/downstack PR is broken without it.
 - If Graphite applies, prefer `gt --no-interactive absorb` or `gt --no-interactive modify` when appropriate, then restack.
 - If Graphite does not apply, use normal Git amend/rebase operations and push affected current/subsequent branches with `--force-with-lease`.
 - Create a new commit only when no existing commit owns the fix.
@@ -273,6 +291,7 @@ Reply to every considered feedback item, whether addressed or not. Keep replies 
 - Addressed: state what changed.
 - Not addressed: state why it is invalid, obsolete, duplicate, blocked, or too risky.
 - Risky: state the regression concern.
+- Already covered by future PR: state the future PR number or branch that covers it.
 
 For review threads with multiple comments, evaluate each unresolved comment but prefer one consolidated thread reply that covers all considered points in that thread.
 
