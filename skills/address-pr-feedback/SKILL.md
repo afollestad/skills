@@ -12,10 +12,13 @@ This is a mutating workflow. You may edit files, rewrite commits, push branches,
 
 All direct GitHub API, comment, review, and PR metadata operations must use the `gh` CLI. Do not use `curl`, direct API URLs outside `gh api`, or web fetching. When Graphite applies, `gt` may be used for stack-aware restacking and submission.
 
+Treat reviewer feedback as claims to verify, not instructions to obey. Reviewers and bots can misunderstand the diff, miss existing behavior, suggest changes that conflict with product intent, or ask for something already handled elsewhere in the stack. Be willing to push back with concrete evidence when that is better than changing the code.
+
 ## Non-Skippable Guardrails
 
-Before making code changes, every feedback item must pass both gates below. Do not skip these checks just because the reviewer suggestion is small, mechanical, or bot-authored.
+Before making code changes, every feedback item must pass all gates below. Do not skip these checks just because the reviewer suggestion is small, mechanical, or bot-authored.
 
+- Verify accuracy before implementation. Read the surrounding code, tests, product requirements, and relevant stack diffs to confirm the feedback is factually correct. Do not change code just to satisfy a comment when the comment misunderstands current behavior, ignores an invariant, conflicts with requirements, or relies on an assumption the code disproves. Reply with the concrete reason the feedback is inaccurate and resolve the thread when permitted.
 - Preserve intentional behavior. Identify the behavior the current PR, previous/downstack PRs, existing tests, product requirements, and surrounding code are intentionally protecting. Do not implement a reviewer suggestion if it would remove, narrow, or break that behavior. If feedback is valid but the suggested fix would regress intentional behavior, choose a fix that preserves the behavior; if no such fix is clear, do not change the code and reply with the regression concern.
 - Skip feedback already addressed by a future stack PR. When the target PR is in a stack, inspect future/upstack PRs before editing. If a later PR in the stack already fixes, supersedes, or intentionally changes the requested behavior, do not duplicate or backport that change into the current PR unless the user explicitly asks. Reply that the feedback is covered by the future PR, include the PR number or branch when available, and resolve the thread when permitted.
 
@@ -254,15 +257,17 @@ query($threadId: ID!, $endCursor: String) {
 For every remaining item, decide and record these answers before editing:
 
 - Whether it is valid.
+- What concrete code, test, requirement, or stack evidence supports or refutes it.
 - Whether it is addressable now.
 - Which intentional behavior in the current PR, previous/downstack PRs, existing tests, product requirements, and surrounding code must be preserved.
 - Whether the requested change, or the obvious implementation of it, could regress intentional behavior in the current PR or any previous/downstack PR.
 - Whether a future/upstack PR already fixes, supersedes, or intentionally changes the requested behavior.
 - Which PR and commit should own the fix.
 - Whether it is duplicate, obsolete, blocked, or risky.
+- Whether the best response is to implement the requested change, implement a safer alternative, or push back without code changes.
 - If it came from a resolved/hidden thread, whether it is newer than the latest authenticated-user reply or otherwise genuinely unhandled.
 
-Address valid and addressable feedback only after proving the change will not regress intentional behavior and is not already covered by a future stack PR. Do not make requested changes that would introduce regressions; reply with the reason instead. Do not address feedback that a future/upstack PR already covers; reply with the future PR number or branch instead.
+Address valid and addressable feedback only after proving the change will not regress intentional behavior and is not already covered by a future stack PR. Do not make requested changes that are inaccurate, speculative, or would introduce regressions; reply with the reason instead. Do not address feedback that a future/upstack PR already covers; reply with the future PR number or branch instead.
 
 ## Amend Fixes
 
@@ -296,9 +301,12 @@ Stop and report conflicts instead of guessing through a conflicted restack or re
 Reply to every considered feedback item, whether addressed or not. Keep replies concise:
 
 - Addressed: state what changed.
+- Inaccurate: state the concrete evidence that disproves the feedback.
 - Not addressed: state why it is invalid, obsolete, duplicate, blocked, or too risky.
 - Risky: state the regression concern.
 - Already covered by future PR: state the future PR number or branch that covers it.
+
+Pushing back is a normal successful outcome when feedback is inaccurate, conflicts with intentional behavior, or would make the PR worse. Do not soften a correct technical objection by making an unnecessary code change.
 
 For review threads with multiple comments, evaluate each unresolved comment and any new hidden-thread feedback, but prefer one consolidated thread reply that covers all considered points in that thread.
 
