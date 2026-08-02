@@ -1,11 +1,11 @@
 ---
 name: address-pr-feedback
-effort: xhigh
 description: |
   Address, fix, respond to, or resolve GitHub pull request feedback. Use when
   the user asks to handle PR review comments, or address feedback on PRs.
-compatibility: Requires git, gh, jq, and internet access. Optionally uses gt for Graphite-managed stacks.
 argument-hint: "[PR URL|PR number|branch]"
+effort: xhigh
+model: fable
 ---
 
 This is a mutating workflow. You may edit files, rewrite commits, push branches, reply to comments, resolve threads, and hide eligible bot comments. Act immediately unless the user explicitly asks for a checkpoint.

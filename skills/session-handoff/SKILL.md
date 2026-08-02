@@ -3,6 +3,8 @@ name: session-handoff
 description: |
   Invoke this skill whenever the user asks you to produce a prompt, summary, or context package intended as input for a future AI session. This covers: handoff prompts, context dumps, new-thread prompts, paste-ready prompts for fresh sessions, or any request to distill this conversation so another Claude instance or background agent can continue the work. Also invoke when the user mentions context window limits, thread length concerns, or wanting to reset/wrap up while preserving progress for a next session. This skill owns the output format and relevance filtering — do not attempt these handoffs without it. Do NOT invoke for human-audience artifacts: docs, READMEs, commit messages, tickets, release notes, standup updates, code explanations, or handoffs to human coworkers.
 argument-hint: "[Next focus area]"
+effort: xhigh
+model: fable
 ---
 
 Turn the current session into a prompt that another agent can use immediately.

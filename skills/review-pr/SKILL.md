@@ -1,9 +1,9 @@
 ---
 name: review-pr
-effort: xhigh
 description: Review a PR and submit suggestions as comments, along with an optional approval/request for changes.
-compatibility: Requires git, gh, jq, and internet access.
 argument-hint: "[PR URL]"
+effort: xhigh
+model: fable
 ---
 
 **Read-only:** Do not modify any files. Your job is to review, report, and submit feedback on GitHub. Do not to make local changes.

@@ -1,18 +1,13 @@
 ---
 name: self-review-diff
-effort: xhigh
 description: |
-  Self-review, self review, self-reviewing, audit, check, or fix the current
-  uncommitted Git diff or other uncommitted local Git changes before a commit or
-  pull request. Use when the user asks for a repo-aware quality audit,
-  pre-commit review, review of their diff, another pass,
-  or another pass over local changes, or when asked to inspect local diffs,
-  staged changes, unstaged changes, or untracked files for bugs, regressions,
-  missing tests, lint, accessibility, stale code, or similar issues. The workflow
-  loops after automatic or confirmed fixes until two consecutive clean passes
-  verify that nothing remains to fix or report.
-compatibility: Requires git. Optionally uses gt for Graphite-managed stacks. Uses repo-specific lint and test tools discovered from local guidance.
+  Self review, audit, check, or fix the current uncommitted Git diff or other uncommitted local Git changes 
+  before a commit or pull request. Use when the user asks for a quality audit, pre-commit review, review of 
+  their diff, another pass over changes, or when asked to inspect local diffs, staged changes, unstaged changes, 
+  or untracked files for bugs, regressions, missing tests, lint, accessibility, stale code, or similar issues. 
 argument-hint: "[optional focus area]"
+effort: xhigh
+model: fable
 ---
 
 This is a mutating workflow by default. You may edit files to address clearly low-risk findings. Ask before higher-risk fixes, behavior changes, broad refactors, or creating a new commit. Do not push unless the user explicitly asks.
