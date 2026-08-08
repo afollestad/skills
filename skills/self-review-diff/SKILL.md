@@ -7,7 +7,6 @@ description: |
   or untracked files for bugs, regressions, missing tests, lint, accessibility, stale code, or similar issues. 
 argument-hint: "[optional focus area]"
 effort: xhigh
-model: fable
 ---
 
 This is a mutating workflow by default. You may edit files to address clearly low-risk findings. Ask before higher-risk fixes, behavior changes, broad refactors, or creating a new commit. Do not push unless the user explicitly asks.
