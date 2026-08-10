@@ -131,15 +131,16 @@ Follow any user-specified commit or amend preference first.
 
 If the user gives no preference, prefer amending fixes into the relevant existing commit after focused lint/tests. Use the changed files, branch, and commit history to identify the owning commit. If no relevant commit exists, leave fixes uncommitted or ask before creating a new commit. If multiple commits plausibly own the fix, do not guess; report the ambiguity and ask before amending.
 
-When Graphite is applicable:
+When the current branch is part of a stack tracked by `gh stack`:
 
-- Treat Graphite as active only when `gt` is installed, `gt --no-interactive log short --stack` succeeds, and the current branch is present in the tracked stack.
-- Prefer Graphite-native operations such as `gt --no-interactive modify` for amending the current branch when applicable.
-- Do not use raw `git commit --amend` or manual rebases for Graphite-tracked commits unless Graphite cannot perform the requested operation and the user confirms the fallback.
-- Restack affected descendants with `gt --no-interactive restack --upstack` after changing a non-tip branch.
-- Do not use `gt submit` or push unless the user explicitly asks.
+- Treat the stack as active only when `gh stack view --json` exits `0` and the current branch appears as a `branches[].name` in that output. That command also proves the `github/gh-stack` extension is installed. Exit code `2` means the branch is not in a tracked stack.
+- Always pass `--json`. Bare `gh stack view` opens a full-screen TUI under a PTY and blocks. Status messages go to stderr, so branch on exit codes instead of parsing output.
+- Amend with normal `git commit --amend` on the branch that owns the commit. `gh stack` has no non-interactive amend command, so plain Git is the correct tool. Never start `gh stack modify`; restructuring happens only in its TUI, which refuses to run without an interactive terminal and blocks under one. If a `gh stack` command exits `10`, an unfinished modify session is blocking it, and `gh stack modify --abort` is a non-interactive recovery that restores the stack.
+- Rebase affected descendants with `gh stack rebase --upstack` after amending a non-tip branch, instead of hand-rebasing each one. If the repository has more than one remote and `remote.pushDefault` is unset, pass `--remote <name>`.
+- If `gh stack rebase` exits `3`, resolve the conflicted files, `git add` them, then run `gh stack rebase --continue`. Use `gh stack rebase --abort` to restore every branch. Stop and report rather than guessing through a conflicted rebase.
+- Do not run `gh stack push`, `gh stack submit`, or `gh stack sync` unless the user explicitly asks; all three write to the remote.
 
-When Graphite is not applicable, use normal Git amend/rebase operations that match the user's requested workflow. Confirm before rewriting commits other than the current branch tip or before complex rebases. Use `GIT_EDITOR=true` for rebase continuation commands that would otherwise open an editor.
+When the branch is not in a stack, use normal Git amend/rebase operations that match the user's requested workflow. Confirm before rewriting commits other than the current branch tip or before complex rebases. Use `GIT_EDITOR=true` for rebase continuation commands that would otherwise open an editor.
 
 ## Report Structure
 
@@ -163,7 +164,7 @@ Validation:
 - <checks skipped and reason>
 
 Commit status:
-- <amended/committed/left uncommitted; mention Graphite if used, and whether any auto-fixes remain staged, unstaged, or untracked>
+- <amended/committed/left uncommitted; mention any `gh stack` rebase that ran, and whether any auto-fixes remain staged, unstaged, or untracked>
 ```
 
 If no issues are found, say that clearly and still include any residual test or validation gaps.
