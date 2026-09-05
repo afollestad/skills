@@ -1,172 +1,61 @@
 ---
 name: self-review-diff
-description: |
-  Self review, audit, check, or fix the current uncommitted Git diff or other uncommitted local Git changes
-  before a commit or pull request. Use when the user asks for a quality audit, pre-commit review, review of
-  their diff, another pass over changes, or when asked to inspect local diffs, staged changes, unstaged changes,
-  or untracked files for bugs, regressions, missing tests, lint, accessibility, stale code, or similar issues.
+description: Audit staged, unstaged, and untracked changes before a commit or PR, and fix clear low-risk issues. Use for local diff reviews, quality audits, or another pass over changes.
 argument-hint: "[optional focus area]"
 effort: xhigh
 ---
 
-This is a mutating workflow by default. Edit files to fix clearly low-risk findings; ask before higher-risk fixes, behavior changes, broad refactors, or new commits. Do not push unless the user explicitly asks.
+Fix clear low-risk findings unless the user requests an audit without edits. Ask before higher-risk changes or new commits.
 
-If the user asks for an audit-only review or says not to edit, report findings without modifying files.
+## Inspect
 
-## Prerequisites
+Read applicable `AGENTS.md` guidance and inspect:
 
-- Inspect the worktree:
-  ```bash
-  git status --short
-  git diff --stat
-  git diff --staged --stat
-  git diff --check
-  git diff --staged --check
-  git diff
-  git diff --staged
-  git ls-files --others --exclude-standard
-  ```
-- Run `git rev-parse --verify HEAD` before relying on `git diff HEAD`. If it succeeds, also inspect `git diff HEAD --stat`, `git diff HEAD --check`, and `git diff HEAD`. If the repository has no commits yet, skip those and review staged, unstaged, and untracked files directly.
-- Include staged, unstaged, and relevant untracked files. Read untracked files directly; they do not appear in `git diff`.
-- When `HEAD` exists and a tracked file has both staged and unstaged changes, inspect `git diff HEAD -- "<file>"` and read the final file contents so interactions between staged and unstaged hunks are reviewed. Do not use the combined diff to decide what to stage.
-- If the user supplies a focus area, prioritize it but still account for the full local change set unless the user explicitly asks for a scoped-only audit. State the actual audit scope in the final report.
-- Record the current branch with `git branch --show-current`. If it is empty, record the detached `HEAD` SHA with `git rev-parse --short HEAD` and do not amend or create commits unless the user explicitly wants work done in detached HEAD or asks you to check out a branch first.
-- Read applicable `AGENTS.md` files from the repo root and affected subdirectories before deciding on lint, tests, styling, commits, or review behavior.
-- Note any tests, snapshots, type checks, or lint runs that already covered this change set just before the skill was invoked, and what scope they covered; [Validation](#validation) reuses them.
-- Do not overwrite unrelated dirty changes. If unrelated local changes affect the same files, work around them carefully or stop and explain the conflict.
-- Preserve the user's staging intent. If committing or amending, stage only the intended fix hunks and keep pre-existing staged and unstaged changes separate whenever possible.
-- Quote file paths in shell commands, especially paths from `git ls-files`, so spaces or shell metacharacters do not change which files are inspected.
-
-## Understand the Changes
-
-Build a repo-aware view before judging the changes:
-
-- Identify the changed feature area, public interfaces, schemas, generated files, tests, snapshots, docs, and configuration touched by the local changes.
-- Read nearby production code and tests for existing patterns.
-- Search for call sites, references, feature flags, experiment gates, serializers, navigation paths, UI previews, and consumers of changed APIs.
-- For regressions, search broadly enough to find unintended consequences outside the directly edited files.
-- For UI changes, inspect the rendering path, accessibility labels/traits/roles, dynamic type or text scaling, focus order, touch targets, loading/error/empty states, and snapshot or preview coverage.
-
-Prefer `rg` for searches. Use structured tools when the repo provides them, such as language servers, code search helpers, generated type lookups, or project-specific CLIs.
-
-## Audit Checklist
-
-Review the changes for all of these categories:
-
-1. Potential bugs in logic, state handling, concurrency, async flows, nullability, parsing, serialization, navigation, persistence, or error handling.
-2. Missing edge cases, including empty inputs, absent optional fields, partial failures, retries, pagination, localization, time zones, permissions, and unsupported platforms.
-3. Potential regressions. Trace consumers and nearby workflows broadly enough to catch behavior changes outside the edited files.
-4. Performance issues, including unnecessary work in hot paths, repeated allocation, blocking I/O, slow rendering, expensive recomposition/re-rendering, or inefficient queries.
-5. Dead or stale code, unused symbols, obsolete branches, duplicated helpers, stale TODOs, or code made unreachable by the changes.
-6. File-size pressure. Check whether changed files are becoming hard to maintain and whether new logic belongs in an existing local abstraction. Treat file splitting as higher-risk unless it is mechanical and clearly isolated.
-7. Missing test coverage, including unit, integration, snapshot, preview, fixture, migration, and regression coverage appropriate to the changed behavior.
-8. Missing comments or class/function/property documentation. Add inline comments only when they explain non-obvious intent, constraints, invariants, or tradeoffs. Tests, scoped docs, and `AGENTS.md` guidance do not replace a short local comment when changed code has a surprising invariant future readers would otherwise have to infer.
-9. Missing or stale `AGENTS.md` guidance when the change reveals a durable workflow rule, repo convention, validation command, or pitfall future agents need.
-10. Lint warnings or errors. Use the smallest relevant lint or format check from repo guidance. Do not run broad lint tasks when local instructions forbid them.
-11. Accessibility issues in UI changes, including labels, roles, states, contrast, text scaling, focus order, keyboard/screen-reader navigation, hit targets, and motion sensitivity.
-12. Other general problems: naming, readability, maintainability, security, privacy, logging, metrics, observability, ownership, docs, rollout safety, and compatibility.
-
-## Fix Policy
-
-Automatically fix findings only when the fix is low risk and clearly correct:
-
-- Obvious lint, formatting, import, warning, or typo fixes limited to changed files or intended fix hunks.
-- Small missing tests that directly cover changed behavior using existing test helpers, fixtures, and patterns without changing production semantics.
-- Straightforward accessibility labels, hints, or state metadata omissions in newly changed UI when the intended semantics are obvious from visible text or nearby patterns.
-- Trivial private stale code removal when static references prove it is unused and removal cannot affect public API, generated contracts, resources, serialization, dependency injection, reflection, or entrypoints.
-- Clarifying comments for non-obvious changed logic when the invariant is directly supported by nearby code, tests, or local documentation. These stay low risk even when tests or scoped docs already cover the behavior, because the comment belongs where the invariant can be misread.
-
-Ask for confirmation before fixing higher-risk findings:
-
-- Behavior changes, API or schema changes, persistence changes, data migrations, networking contract changes, generated-code changes, feature flag behavior, or rollout logic.
-- Whole-repo formatters, broad auto-fix commands, or lint fixes that may rewrite unrelated files.
-- Accessibility changes that alter focus order, grouping, roles, hit targets, keyboard navigation, gestures, layout, or visible UI behavior.
-- Dead-code removal involving public symbols, serialized fields, resources, dependency injection, reflection, build configuration, command entrypoints, or anything discoverable dynamically.
-- Snapshot baseline changes, broad refactors, file splitting, moving code across ownership boundaries, or changing public documentation.
-- Comments or documentation that introduce new product policy, architectural policy, ownership guidance, or speculative rationale not already supported by the codebase.
-- New test infrastructure, broad fixture rewrites, snapshot harness changes, or test helper changes that affect unrelated tests.
-- Existing test expectation rewrites, unless purely mechanical and unable to mask a behavior change.
-- Any fix that may regress existing behavior or alter a previous/downstack commit's intent.
-- Creating a new commit when no relevant existing commit should own the fix.
-- Updating `AGENTS.md`, unless the user specifically asked for guidance changes.
-
-If a finding is valid but not safe to fix automatically, report it with the concrete risk, affected files, and the recommended fix.
-
-## Validation
-
-Run the smallest relevant checks that cover the changed area after any fix, and again before the final report even if the last pass made no fixes.
-
-Reuse instead of rerunning: when a test, snapshot, type, or lint run already covered the changed scope — in an earlier pass, or just before the skill was invoked — and nothing in that scope changed since, treat it as passing evidence and skip it. Rerun once you edit files it covered, or if it failed, was partial or interrupted, or its scope is unclear. Report which checks were reused.
-
-Git checks are cheap; always rerun them:
-
-- `git status --short` and the relevant diff/stat commands, to verify the final local changes contain only the intended fixes.
-- `git diff --check`, `git diff --staged --check`, and `git diff HEAD --check` when `HEAD` exists.
-- For each relevant untracked text file from `git ls-files --others --exclude-standard`, run `git diff --no-index --check -- /dev/null "<file>"` or an equivalent whitespace check, because plain `git diff --check` does not inspect untracked additions. `git diff --no-index` exits `1` for ordinary differences, so treat empty output as clean. For untracked binary files or snapshots, skip the whitespace check and validate them with the repo's normal artifact or snapshot workflow.
-
-Then run the focused checks the change needs:
-
-- Unit tests, snapshot tests, type checks, or lint commands identified by local guidance or repo conventions.
-- For Kotlin or Android, prefer focused Spotless or ktfmt checks and targeted tests. Do not run broad `:lint` Gradle tasks unless the repo explicitly requires them.
-- For iOS repos with Cash CLI guidance, prefer focused `cash lint` and targeted tests or snapshots.
-
-If a check cannot run because a tool is missing, auth is unavailable, dependencies are not installed, or the command is too broad for the requested change, say so in the final report. Do not amend or create a commit after failed validation unless the user explicitly asks you to preserve the failing state; report the failure and leave the fixes uncommitted.
-
-## Iteration Loop
-
-After validating any fix, restart this workflow from [Prerequisites](#prerequisites) against the updated local change set. Do not require the user to ask for another pass.
-
-A clean pass means the prerequisites, changed-file inspection, relevant searches, full audit checklist, and validation all ran against the current worktree, with no low-risk fixes applied and no higher-risk findings needing confirmation.
-
-Repeat until two consecutive clean passes complete. After the first clean pass, immediately run a fresh confirmation pass: rerun the prerequisite commands, re-read the final contents of changed tracked files and relevant untracked files, redo the relevant searches, and do not rely on remembered conclusions. The reuse rule in [Validation](#validation) still applies to test, snapshot, type, and lint runs. Only move on to commit or amend decisions after the second consecutive clean pass, unless the user requested different commit timing.
-
-If the confirmation pass finds a low-risk fix or higher-risk finding, handle it under the normal fix policy, reset the consecutive clean-pass count, and restart from [Prerequisites](#prerequisites) after any validation.
-
-Pause for confirmation before fixing higher-risk findings. If the user declines or defers one, stop the loop and include it in the final report instead of repeatedly asking.
-
-Guard against infinite loops. Track repeated finding/fix pairs within the session; if the same issue returns after a fix or validation step, stop and report it as a blocker with the files and commands involved.
-
-## Commit and Amend Policy
-
-Follow any user-specified commit or amend preference first.
-
-If the user gives no preference, prefer amending fixes into the relevant existing commit after focused lint/tests. Use the changed files, branch, and commit history to identify the owning commit. If no relevant commit exists, leave fixes uncommitted or ask before creating a new commit. If multiple commits plausibly own the fix, do not guess; report the ambiguity and ask before amending.
-
-When the current branch is part of a stack tracked by `gh stack`:
-
-- Treat the stack as active only when `gh stack view --json` exits `0` and the current branch appears as a `branches[].name` in that output. That command also proves the `github/gh-stack` extension is installed. Exit code `2` means the branch is not in a tracked stack.
-- Always pass `--json`. Bare `gh stack view` opens a full-screen TUI under a PTY and blocks. Status messages go to stderr, so branch on exit codes instead of parsing output.
-- Amend with normal `git commit --amend` on the branch that owns the commit. `gh stack` has no non-interactive amend command. Never start `gh stack modify`; restructuring happens only in its TUI, which refuses to run without an interactive terminal and blocks under one. If a `gh stack` command exits `10`, an unfinished modify session is blocking it, and `gh stack modify --abort` is a non-interactive recovery that restores the stack.
-- Rebase affected descendants with `gh stack rebase --upstack` after amending a non-tip branch, instead of hand-rebasing each one. If the repository has more than one remote and `remote.pushDefault` is unset, pass `--remote <name>`.
-- If `gh stack rebase` exits `3`, resolve the conflicted files, `git add` them, then run `gh stack rebase --continue`. Use `gh stack rebase --abort` to restore every branch. Stop and report rather than guessing through a conflicted rebase.
-- Do not run `gh stack push`, `gh stack submit`, or `gh stack sync` unless the user explicitly asks; all three write to the remote.
-
-When the branch is not in a stack, use normal Git amend/rebase operations that match the user's requested workflow. Confirm before rewriting commits other than the current branch tip or before complex rebases. Use `GIT_EDITOR=true` for rebase continuation commands that would otherwise open an editor.
-
-## Report Structure
-
-End with a concise report:
-
-```markdown
-Audited:
-- <local change scope>
-
-Auto-fixed:
-- <low-risk fixes, or "None">
-
-Needs confirmation:
-- <finding, risk, and recommended fix, or "None">
-
-Passes:
-- <number of audit passes; whether two consecutive clean passes completed, or why the loop stopped>
-
-Validation:
-- <checks run and result>
-- <checks reused from an earlier run instead of rerun>
-- <checks skipped and reason>
-
-Commit status:
-- <amended/committed/left uncommitted; mention any `gh stack` rebase that ran, and whether any auto-fixes remain staged, unstaged, or untracked>
+```bash
+git status --short
+git branch --show-current
+git diff
+git diff --staged
+git ls-files --others --exclude-standard
 ```
 
-If no issues are found, say that clearly and still include any residual test or validation gaps.
+Read untracked files directly. If `HEAD` exists, inspect `git diff HEAD` and final file contents for staged/unstaged interactions. Preserve unrelated edits and staging intent.
+
+Review all local changes unless the user limits scope; prioritize any requested focus. Read surrounding code/tests and trace affected consumers.
+
+## Audit and Fix
+
+Check:
+
+- Correctness, edge cases, concurrency, error handling, and regressions.
+- Security, privacy, compatibility, and rollout safety.
+- Performance, stale code, duplication, readability, and oversized files.
+- Relevant test coverage, lint, and documentation of non-obvious invariants.
+- UI accessibility: labels, roles, states, contrast, text scaling, focus, navigation, hit targets, and motion.
+- Durable workflow rules or pitfalls missing from `AGENTS.md`.
+
+Automatically fix scoped formatting or typos, small tests using existing helpers, obvious accessibility metadata, proven-unused private code, and comments explaining supported invariants.
+
+Ask before changing behavior, contracts, persistence, generated code, rollout logic, UI interactions/layout, snapshots, test expectations/infrastructure, public documentation, or `AGENTS.md`. Also ask before broad refactors/formatters or removing dynamically referenced code. Report deferred findings with files, risks, and recommended fixes.
+
+## Validate and Repeat
+
+Run the smallest relevant lint, tests, type checks, or snapshots. Reuse passing checks whose scope is unchanged; rerun failed, incomplete, or uncertain checks. Explain skipped checks. Leave fixes uncommitted after failed validation unless requested otherwise.
+
+Each pass, refresh status/diffs and run `git diff --check`, `git diff --staged --check`, and `git diff HEAD --check` if `HEAD` exists. Check untracked text with `git diff --no-index --check -- /dev/null "<file>"`; empty output is clean even with exit `1`. Validate binaries through normal artifact checks.
+
+Reread changed files and repeat relevant searches until two consecutive passes find no fixes or unresolved findings. Reset after a fix; stop and report deferred or recurring issues.
+
+## Commits
+
+Follow the user's commit preference. Otherwise, after validation, amend the owning commit. Leave fixes uncommitted if none owns them; ask if ownership is ambiguous.
+
+Require explicit direction to commit in detached `HEAD`, rewrite non-tip commits outside a stack, or perform complex rebases. Use `GIT_EDITOR=true` for rebase continuation. Do not push or run `gh stack push`, `submit`, or `sync` unless requested.
+
+For `gh stack`:
+
+- Use it only if `gh stack view --json` succeeds and includes the current branch in `branches[].name`; exit `2` means no tracked stack. Avoid interactive bare `view` and `modify`. Recover from exit `10` (unfinished modify session) with `gh stack modify --abort`.
+- Check out the owning branch, amend with `git commit --amend`, then run `gh stack rebase --upstack` from that branch to update descendants. With multiple remotes and no `remote.pushDefault`, pass the intended `--remote <name>`.
+- On rebase exit `3`, stage understood resolutions and run `gh stack rebase --continue`; `--abort` restores all branches. Report conflicts you cannot resolve confidently.
+
+Report scope, fixes, remaining findings, clean-pass count, validation run/reused/skipped, and commit/stack status. State when no issues remain.
