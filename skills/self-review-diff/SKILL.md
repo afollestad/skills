@@ -30,7 +30,7 @@ Check:
 - Correctness, edge cases, concurrency, error handling, and regressions.
 - Security, privacy, compatibility, and rollout safety.
 - Performance, stale code, duplication, readability, and oversized files.
-- Relevant test coverage, lint, and documentation of non-obvious invariants.
+- Relevant test coverage, excessive (unnecessary) test coverage, lint, and documentation of non-obvious invariants.
 - UI accessibility: labels, roles, states, contrast, text scaling, focus, navigation, hit targets, and motion.
 - Durable workflow rules or pitfalls missing from `AGENTS.md`.
 
