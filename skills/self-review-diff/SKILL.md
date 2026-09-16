@@ -38,12 +38,12 @@ Check:
 
 ### Trace Contracts Across Boundaries
 
-For stateful, asynchronous, or external integrations, trace the changed behavior from its caller through the operation, returned result/events, and final UI or persisted state. Identify who owns acceptance, completion, retries, and the authoritative state. Check that discovery, preflight, execution, and recovery use the same identity and scope.
+For stateful, asynchronous, or external integrations, trace the changed behavior from its caller through the operation, returned result/events, and final UI or persisted state. Identify who owns acceptance, completion, retries, and the authoritative state. Check that discovery, preflight, execution, and recovery use the intended identity and scope, preserving validated transitions between them.
 
 Choose concrete high-risk sequences rather than relying on a generic checklist:
 
 - Work completes before the initiating call returns; its continuation must not revive a finished turn or overwrite newer state.
-- A mutation succeeds but its response is lost, and a subsequent recovery read also fails; distinguish confirmed acceptance, definite rejection, and unknown outcome without replaying side effects.
+- A mutation succeeds but its response is lost, and a subsequent recovery read also fails; distinguish confirmed acceptance, definite rejection, and unknown outcome without duplicating side effects.
 - Cancellation, replacement, deletion, or selection changes occur during an `await`; re-resolve authoritative state before publishing or mutating it.
 - Events are duplicated, delayed, or reordered; distinguish a failed operation from a failed session/process, and reconcile both pending and resolved interactions.
 
