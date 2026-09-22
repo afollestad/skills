@@ -6,7 +6,7 @@ effort: xhigh
 model: fable
 ---
 
-Use `gh` for GitHub operations. Edit, amend, push, reply, resolve threads, and minimize eligible bot feedback unless the user limits scope or requests a checkpoint.
+Use `gh` for GitHub operations. Edit, amend, push, reply, resolve threads, and minimize all eligible bot comments unless the user limits scope or requests a checkpoint.
 
 ## Locate the Work
 
@@ -54,11 +54,11 @@ Fetch top-level comments with `gh api repos/{owner}/{repo}/issues/<number>/comme
 
 Paginate reviews, threads, and comments using `$endCursor` and `pageInfo { hasNextPage endCursor }`. Nested comments need separate pagination when fetched nodes fall short of `comments.totalCount`. Query REST issue-comment `node_id`s through GraphQL for minimization state.
 
-Ignore minimized items, dismissed or empty reviews, unsubmitted thread comments, and outdated comments unless newer feedback keeps the issue current.
+When evaluating feedback, ignore minimized items, dismissed or empty reviews, unsubmitted thread comments, and outdated comments unless newer feedback keeps the issue current. Retain submitted bot items as cleanup candidates regardless of these filters.
 
 In resolved threads, inspect eligible comments from others after the authenticated user's latest submitted reply, ordered by `createdAt`. Without a self-reply, inspect the latest eligible non-self comment. Threads without new feedback are cleanup candidates only.
 
-Keep actionable feedback separate from bot cleanup candidates, including summaries linked to resolved threads.
+Keep actionable feedback separate from bot cleanup candidates, including inline comments and replies, summaries, boilerplate, and items from earlier runs or resolved threads.
 
 ## Evaluate and Fix
 
@@ -89,10 +89,12 @@ After replying, refresh thread state. Resolve considered threads, including decl
 
 ## Bot Cleanup
 
-After considering their feedback, minimize only top-level comments and review summaries with `viewerCanMinimize`. Automation must be confirmed by REST `user.type == "Bot"`, GraphQL `author.__typename == "Bot"`, or an exact known Codex login for this repository. Do not infer automation from username substrings.
+After considering their feedback, minimize every eligible bot-authored top-level comment, review summary, inline comment, and thread reply with `viewerCanMinimize`. Automation must be confirmed by REST `user.type == "Bot"`, GraphQL `author.__typename == "Bot"`, or an exact known Codex login for this repository. Do not infer automation from username substrings.
 
-A bot summary is eligible when its body is considered or boilerplate and no current comments remain actionable or unresolved. Include eligible summaries from earlier runs. Never minimize inline `PullRequestReviewComment` nodes during cleanup.
+A bot item is eligible when submitted, not already minimized, and its feedback is handled or boilerplate. Leave actionable feedback, comments in unresolved threads, and items awaiting reply submission or requested to remain visible unminimized. A review summary also requires no associated comments to remain actionable or unresolved. Resolving a thread does not replace minimizing its eligible bot comments individually.
 
-Use GraphQL `minimizeComment(input: {subjectId: ..., classifier: RESOLVED})` with the issue comment's `node_id` or `PullRequestReview.id`, not a numeric database ID.
+Use GraphQL `minimizeComment(input: {subjectId: ..., classifier: RESOLVED})` with the issue comment's `node_id`, `PullRequestReview.id`, or `PullRequestReviewComment.id`, not a numeric database ID.
+
+Refresh all scoped PRs and verify `isMinimized` for cleanup candidates. Handle newly eligible bot items and report any remaining unminimized items by URL and reason, including permission/API failures.
 
 Report PRs handled, changes, pushes, resolved/open threads, and validation.
