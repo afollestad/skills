@@ -2,8 +2,7 @@
 name: review-pr
 description: Review a GitHub PR and prepare prioritized comments for submission, with optional approval or request for changes.
 argument-hint: "[PR URL]"
-effort: xhigh
-model: fable
+effort: max
 ---
 
 Review without changing repository files. Use `gh` for all GitHub operations.

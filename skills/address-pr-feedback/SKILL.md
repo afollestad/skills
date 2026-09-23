@@ -2,8 +2,7 @@
 name: address-pr-feedback
 description: Address GitHub PR feedback by verifying comments, fixing valid issues, replying, and resolving threads.
 argument-hint: "[PR URL|PR number|branch]"
-effort: xhigh
-model: fable
+effort: max
 ---
 
 Use `gh` for GitHub operations. Edit, amend, push, reply, resolve threads, and minimize all eligible bot comments unless the user limits scope or requests a checkpoint.

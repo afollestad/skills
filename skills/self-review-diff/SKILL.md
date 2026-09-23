@@ -2,7 +2,7 @@
 name: self-review-diff
 description: Audit staged, unstaged, and untracked changes before a commit or PR, and fix clear low-risk issues. Use for local diff reviews, quality audits, or another pass over changes.
 argument-hint: "[optional focus area]"
-effort: xhigh
+effort: max
 ---
 
 Fix clear low-risk findings unless the user requests an audit without edits. Ask before higher-risk changes or new commits.

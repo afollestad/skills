@@ -2,8 +2,7 @@
 name: session-handoff
 description: Create a handoff prompt for a future AI session when resetting a thread or transferring work. Not for human-facing summaries or documentation.
 argument-hint: "[Next focus area]"
-effort: xhigh
-model: fable
+effort: high
 ---
 
 Produce a paste-ready prompt for the next session's goal. Infer it from the conversation; ask only if unclear.
