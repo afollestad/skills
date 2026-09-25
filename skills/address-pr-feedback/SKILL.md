@@ -9,7 +9,7 @@ Use `gh` for GitHub operations. Edit, amend, push, reply, resolve threads, and m
 
 ## Locate the Work
 
-Check `gh auth status` and record `gh api user --jq .login` for reply deduplication. Inspect the worktree and branch; preserve unrelated changes.
+Check `gh auth status` and record `gh api user --jq .login` to identify your own replies. Inspect the worktree and branch; preserve unrelated changes.
 
 Use the supplied target or the checked-out branch's PR. Stop if none exists.
 
@@ -22,15 +22,13 @@ Before editing, verify the head is writable and check out the owning branch with
 
 ## Stack Scope
 
-For a supplied PR in a stack, announce "Addressing stack feedback starting with [PR]" and work from that PR through its descendants to the tip. Inspect ancestors for context only. Without a supplied target, include the whole connected stack.
-
-Inspect ancestor and descendant diffs for behavior, fix ownership, and changes already made later in the stack.
+For a supplied PR in a stack, announce "Addressing stack feedback starting with [PR]" and work from that PR through its descendants to the tip; ancestors are context only. Without a supplied target, include the whole connected stack. Inspect ancestor and descendant diffs for behavior, fix ownership, and changes already made later in the stack.
 
 ### Tracked Stacks
 
 Use `gh stack` only when `gh stack view --json` succeeds and includes the target's `headRefName` in `branches[].name`. Exit `2` means no tracked stack. `branches[]` gives stack order; `pr.number` identifies each PR.
 
-If absent, try `gh stack checkout <PR-URL>` and recheck. A bare number can select an unrelated stack. Fall back to branch relationships if verification fails.
+If absent, try `gh stack checkout <PR-URL>` and recheck; a bare number can select an unrelated stack. If verification still fails, use Inferred Stacks.
 
 Switch layers with `gh stack checkout <branch>`. Avoid interactive commands: bare `view`, `switch`, and `modify`. Exit `10` means an unfinished modify session; recover with `gh stack modify --abort`.
 
@@ -47,36 +45,36 @@ Disambiguate identical branch names by head repository and owner. `--head` does 
 Fetch top-level comments with `gh api repos/{owner}/{repo}/issues/<number>/comments --paginate`. Use GraphQL through `gh api graphql --paginate` for reviews and threads, requesting:
 
 - Reviews: `id`, `body`, `state`, `url`, minimization fields, and author.
-- Threads: `id`, `isResolved`, `viewerCanReply`, `viewerCanResolve`, path/line context, and comments.
+- Threads: `id`, `isResolved`, `viewerCanReply`, `viewerCanResolve`, path/line context, and comments with `totalCount`.
 - Thread comments: `id`, `body`, `url`, `createdAt`, `state`, `outdated`, minimization fields, author, and associated `pullRequestReview` ID/URL/author/minimization fields.
 - Minimization fields: `isMinimized`, `viewerCanMinimize`; author: `{ __typename login }`.
 
-Paginate reviews, threads, and comments using `$endCursor` and `pageInfo { hasNextPage endCursor }`. Nested comments need separate pagination when fetched nodes fall short of `comments.totalCount`. Query REST issue-comment `node_id`s through GraphQL for minimization state.
+`--paginate` follows one connection per query, so query reviews and threads separately using `$endCursor` and `pageInfo { hasNextPage endCursor }`. Paginate nested comments separately when fetched nodes fall short of `comments.totalCount`. Query REST issue-comment `node_id`s through GraphQL for minimization state.
 
 When evaluating feedback, ignore minimized items, dismissed or empty reviews, unsubmitted thread comments, and outdated comments unless newer feedback keeps the issue current. Retain submitted bot items as cleanup candidates regardless of these filters.
 
 In resolved threads, inspect eligible comments from others after the authenticated user's latest submitted reply, ordered by `createdAt`. Without a self-reply, inspect the latest eligible non-self comment. Threads without new feedback are cleanup candidates only.
 
-Keep actionable feedback separate from bot cleanup candidates, including inline comments and replies, summaries, boilerplate, and items from earlier runs or resolved threads.
+Track bot cleanup candidates separately from actionable feedback. Candidates include inline comments and replies, summaries, boilerplate, and items from earlier runs or resolved threads.
 
 ## Evaluate and Fix
 
-Verify feedback against code, tests, requirements, and stack diffs. Identify the owning PR/commit. Fix valid issues while preserving intentional behavior; choose a safer alternative if the suggestion would regress it.
+Verify each claim against code, tests, requirements, and stack diffs, and identify the owning PR/commit. Fix valid issues while preserving intentional behavior; choose a safer alternative if the suggestion would regress it.
 
-Explain inaccurate, duplicate, obsolete, blocked, or risky feedback. If a later PR covers it, cite that PR or branch and skip the change unless the user requests a backport.
+Don't be afraid to push back on feedback that isn't necessary in practice, such as unnecessary test coverage or edge cases a real user will never hit; being technically correct is not enough. Also decline inaccurate, duplicate, obsolete, blocked, or risky feedback. If a later PR covers it, cite that PR or branch and skip the change unless the user requests a backport.
 
-Amend the owning commit; create one only if none owns the fix. Follow repository commit rules, including `Co-authored-by: Codex <noreply@openai.com>` for Codex-authored commits. Run focused lint/tests before committing and pushing; report unavailable checks.
+Run focused lint/tests before committing; report unavailable checks. Follow repository commit rules, including `Co-authored-by: Codex <noreply@openai.com>` for Codex-authored commits.
 
-Work upward from the lowest affected branch within scope. Use `git commit --amend` on the owning branch, then update descendants:
+Work upward from the lowest affected branch within scope. Amend the owning commit with `git commit --amend`, creating a commit only if none owns the fix, then update descendants and push:
 
-- Tracked stack: run `gh stack rebase --upstack` from the amended branch, then `gh stack push`. Rebasing from the tip leaves descendants stale. Push updates active branches with `--force-with-lease`; partial success is possible, so reconcile rejected branches before retrying.
-- Inferred stack: rebase descendants and push each changed branch with `git push --force-with-lease`.
+- Tracked stack: from the amended branch (not the tip), run `gh stack rebase --upstack`, then `gh stack push`, which force-with-lease pushes active branches. Partial success is possible; reconcile rejected branches before retrying. On rebase exit `3`, stage resolutions and run `gh stack rebase --continue`; `--abort` restores all branches.
+- Inferred stack or single PR: record branch tips before amending, rebase each descendant with `git rebase --onto <parent> <old-parent-tip> <child>`, and push each changed branch with `git push --force-with-lease`.
 
-On rebase exit `3`, stage resolutions and run `gh stack rebase --continue`; `--abort` restores all branches. Use `GIT_EDITOR=true` for continuation commands that open an editor. Report conflicts you cannot resolve confidently.
+Use `GIT_EDITOR=true` for continuation commands that open an editor. Report conflicts you cannot resolve confidently.
 
 ## Reply and Resolve
 
-Reply once per thread with the outcome and supporting evidence. Skip replies already covered by the authenticated user unless new feedback has appeared.
+Reply once per thread, concisely stating the fix or the reason for declining, with supporting evidence. Skip threads the authenticated user already answered unless new feedback has appeared.
 
 For threads, require `viewerCanReply` and use GraphQL `addPullRequestReviewThreadReply` with `pullRequestReviewThreadId` and `body`. Capture the returned comment's `state`, `url`, and `pullRequestReview { id state url }`.
 
@@ -88,12 +86,12 @@ After replying, refresh thread state. Resolve considered threads, including decl
 
 ## Bot Cleanup
 
-After considering their feedback, minimize every eligible bot-authored top-level comment, review summary, inline comment, and thread reply with `viewerCanMinimize`. Automation must be confirmed by REST `user.type == "Bot"`, GraphQL `author.__typename == "Bot"`, or an exact known Codex login for this repository. Do not infer automation from username substrings.
+Minimize every eligible bot-authored top-level comment, review summary, inline comment, and thread reply. Confirm automation by REST `user.type == "Bot"`, GraphQL `author.__typename == "Bot"`, or an exact known Codex login for this repository; never infer it from username substrings.
 
-A bot item is eligible when submitted, not already minimized, and its feedback is handled or boilerplate. Leave actionable feedback, comments in unresolved threads, and items awaiting reply submission or requested to remain visible unminimized. A review summary also requires no associated comments to remain actionable or unresolved. Resolving a thread does not replace minimizing its eligible bot comments individually.
+An item is eligible when submitted, not minimized, `viewerCanMinimize`, and its feedback is handled (fixed or declined) or boilerplate. Don't minimize actionable feedback, comments in unresolved threads, items awaiting reply submission, or items the user wants visible. A review summary also requires none of its comments to remain actionable or unresolved. Resolving a thread does not minimize its comments.
 
 Use GraphQL `minimizeComment(input: {subjectId: ..., classifier: RESOLVED})` with the issue comment's `node_id`, `PullRequestReview.id`, or `PullRequestReviewComment.id`, not a numeric database ID.
 
 Refresh all scoped PRs and verify `isMinimized` for cleanup candidates. Handle newly eligible bot items and report any remaining unminimized items by URL and reason, including permission/API failures.
 
-Report PRs handled, changes, pushes, resolved/open threads, and validation.
+Report PRs handled, fixes, declined feedback, pushes, resolved/open threads, and validation.
