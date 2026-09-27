@@ -1,6 +1,6 @@
 ---
 name: self-review-diff
-description: Audit staged, unstaged, and untracked changes before a commit or PR, and fix clear low-risk issues. Use for local diff reviews, quality audits, or another pass over changes.
+description: Adversarially audit staged, unstaged, and untracked changes before a commit or PR, and fix clear low-risk issues. Use for local diff reviews, quality audits, or another pass over changes.
 argument-hint: "[optional focus area]"
 effort: max
 ---
@@ -27,6 +27,8 @@ Establish the review baseline. If the requested feature is already committed, in
 
 ## Audit and Fix
 
+Review as an adversary, not the author. Assume the change is broken until you fail to break it. Distrust commit messages, comments, names, passing tests, and your own memory of intent; judge what the code actually does. For each changed unit, try to construct inputs, states, or orderings that make it fail.
+
 Check:
 
 - Correctness, edge cases, concurrency, error handling, and regressions.
@@ -47,7 +49,7 @@ Choose concrete high-risk sequences rather than relying on a generic checklist:
 - Cancellation, replacement, deletion, or selection changes occur during an `await`; re-resolve authoritative state before publishing or mutating it.
 - Events are duplicated, delayed, or reordered; distinguish a failed operation from a failed session/process, and reconcile both pending and resolved interactions.
 
-Use only scenarios relevant to the change. For suspected bugs, identify a concrete trigger and observable consequence. Prefer a deterministic reproduction through the actual entry point and consumers; helper-only assertions can miss broken wiring. Control event ordering with existing test seams rather than timing sleeps. After fixing a path, inspect sibling paths and callers affected by its changed semantics.
+Use only scenarios relevant to the change. For suspected bugs, identify a concrete trigger and observable consequence, then try to refute the finding: confirm the trigger is reachable and not already guarded. Drop refuted findings rather than padding the report; label findings you can neither confirm nor refute as unverified. Prefer a deterministic reproduction through the actual entry point and consumers; helper-only assertions can miss broken wiring. Control event ordering with existing test seams rather than timing sleeps. After fixing a path, inspect sibling paths and callers affected by its changed semantics.
 
 Automatically fix scoped formatting or typos, small tests using existing helpers, obvious accessibility metadata, proven-unused private code, and comments explaining supported invariants.
 
