@@ -1,6 +1,6 @@
 ---
 name: address-pr-feedback
-description: Address GitHub PR feedback by verifying comments, fixing valid issues, replying, and resolving threads.
+description: Address GitHub PR feedback by adversarially verifying comments, fixing valid issues, replying, and resolving threads.
 argument-hint: "[PR URL|PR number|branch]"
 effort: max
 ---
@@ -59,9 +59,16 @@ Track bot cleanup candidates separately from actionable feedback. Candidates inc
 
 ## Evaluate and Fix
 
-Verify each claim against code, tests, requirements, and stack diffs, and identify the owning PR/commit. Fix valid issues while preserving intentional behavior; choose a safer alternative if the suggestion would regress it.
+Treat each comment as an unproven claim, not an instruction. Reviewers, especially bots, misread diffs, miss context elsewhere in the stack, and suggest plausible fixes that regress intended behavior. Try to refute each claim before accepting it:
 
-Don't be afraid to push back on feedback that isn't necessary in practice, such as unnecessary test coverage or edge cases a real user will never hit; being technically correct is not enough. Also decline inaccurate, duplicate, obsolete, blocked, or risky feedback. If a later PR covers it, cite that PR or branch and skip the change unless the user requests a backport.
+- Restate behavioral claims as a concrete trigger and observable consequence, and style or design claims as a concrete maintenance cost. If you cannot, decline it.
+- Check it against the code at the PR head, its callers, tests, requirements, and stack diffs, not the comment's quoted snippet or line context.
+- Look for guards, invariants, or later-stack changes that already prevent it. Reproduce through the real entry point when practical.
+- Weigh real-world impact. Being technically correct is not enough: decline unnecessary test coverage, speculative hardening, and edge cases a real user will never hit.
+
+Also decline inaccurate, duplicate, obsolete, blocked, or risky feedback. If a later PR covers it, cite that PR or branch and skip the change unless the user requests a backport. Don't concede to reviewer authority, confident tone, or repeated assertions; re-evaluate follow-ups on new evidence only.
+
+For claims that survive, challenge the suggested fix separately; a valid issue can have a wrong or regressive suggestion. Identify the owning PR/commit and fix the underlying cause while preserving intentional behavior, choosing a safer alternative when needed. Then attack your own fix: trace it through callers and sibling paths, and confirm it resolves the underlying issue rather than only satisfying the comment's wording.
 
 Run focused lint/tests before committing; report unavailable checks. Follow repository commit rules, including `Co-authored-by: Codex <noreply@openai.com>` for Codex-authored commits.
 
@@ -74,7 +81,7 @@ Use `GIT_EDITOR=true` for continuation commands that open an editor. Report conf
 
 ## Reply and Resolve
 
-Reply once per thread, concisely stating the fix or the reason for declining, with supporting evidence. Skip threads the authenticated user already answered unless new feedback has appeared.
+Reply once per thread, concisely stating the fix or the reason for declining, with supporting evidence. For declines, cite the specific code, guard, or reasoning that refutes the claim. Skip threads the authenticated user already answered unless new feedback has appeared.
 
 For threads, require `viewerCanReply` and use GraphQL `addPullRequestReviewThreadReply` with `pullRequestReviewThreadId` and `body`. Capture the returned comment's `state`, `url`, and `pullRequestReview { id state url }`.
 
