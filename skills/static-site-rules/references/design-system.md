@@ -39,7 +39,7 @@ Each theme sheet defines these on `:root`, after `color-scheme: light` or `dark`
 |---|---|---|---|---|---|
 | Body | `1rem` | 400 | | 1.5 | `--fg` |
 | Hero `h1` | `clamp(2.75rem, 7vw, 4.25rem)` | 700 | `-.035em` | 1.1 | `--title-gradient` |
-| Tagline | `clamp(1.05rem, 1.6vw, 1.2rem)`, max `36rem`, `text-wrap: balance` | 400 | | 1.55 | `--secondary` |
+| Tagline | `clamp(1.05rem, 1.6vw, 1.2rem)`, max `36rem` (widened just enough to set a longer one in two lines on desktop), `text-wrap: balance` | 400 | | 1.55 | `--secondary` |
 | Section `h2` | `clamp(1.9rem, 3.5vw, 2.6rem)`, `1rem` below its chip | 700 | `-.03em` | 1.1 | `--fg` |
 | Feature copy | `1.1rem`, `1rem` below the `h2` | 400 | | 1.6 | `--secondary` |
 | Chip | `.875rem` | 600 | | | `--chip-fg` |
@@ -68,6 +68,7 @@ Each theme sheet defines these on `:root`, after `color-scheme: light` or `dark`
 - **Product icon.** `.app-icon`: `7rem` wide, `filter: drop-shadow(0 .6rem 1.2rem var(--icon-shadow))`, the `h1` `1.5rem` below it.
 - **CTA row.** `.cta-row`: centered wrapping flex, `gap: .75rem`, `margin-top: 2rem`.
 - **Buttons.** `.btn-primary` and `.btn-ghost`: `height: 3rem`, `padding: 0 1.3rem`, `border-radius: .55rem`, `gap: .5rem` around an 18px icon, no underline, `white-space: nowrap`, `transition: transform .3s var(--spring)`, `scale(1.03)` on hover. Primary is `--accent` with `--on-accent` text and `box-shadow: 0 .5rem 1.25rem -.5rem var(--accent)`; ghost is glass with `--fg` text.
+    - **Two-line labels.** A button's label is a `.btn-stack` (column, left-aligned, `line-height: 1.15`) ending in a `.btn-subtext` line (`.7rem`, 500), which keeps it at `3rem`. A direct download's subtext names the minimum OS ("macOS 26 or later") in full `--on-accent`, since a muted color fails 4.5:1 on the accent; GitHub's reads "Stars appreciated!" in `--secondary`.
 - **Glass.** `--glass` fill, `1px solid var(--glass-border)`, `backdrop-filter: blur(12px) saturate(160%)` with its `-webkit-` copy.
 - **Chips.** `.chip`: `inline-flex`, `padding: .3rem .85rem`, `border-radius: 999px`, `--chip-bg` fill, `box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .2), inset 0 1px 0 rgba(255, 255, 255, .3), 0 1px 2px rgba(0, 0, 0, .1), 0 .35rem .9rem -.35rem var(--chip-bg)`. On a page with section headlines the chip is a `<p>` above the `h2`; otherwise the chip can be the `h2`.
 - **Media frames.** `.media-frame`: `border-radius: 1rem`, `1px solid var(--hairline)`, `--surface` fill, `overflow: hidden`, `box-shadow: 0 2px 4px rgba(0, 0, 0, .08), 0 1.5rem 3rem -1rem var(--media-shadow), 0 3rem 6rem -2rem var(--media-shadow)`. Screenshots inside are square-cornered and `width: 100%`.
