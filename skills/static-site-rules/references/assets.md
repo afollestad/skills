@@ -28,4 +28,4 @@ Convert non-sRGB images to sRGB first, since browsers read untagged pixels as sR
 
 ## Badges
 
-Keep third-party badges and marks their owner's artwork, unaltered and at least their minimum size.
+Keep third-party badges and marks their owner's artwork, unaltered and at least their minimum size. The App Store link is the exception: a primary button, per the Buttons component in [`design-system.md`](design-system.md).

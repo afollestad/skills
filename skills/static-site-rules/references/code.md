@@ -10,6 +10,7 @@ styles/index-dark.css    Dark tokens and theme-painted backgrounds
 styles/<page>.css        A secondary page's own layout, if it needs one
 scripts/dark-mode.js     Theme override
 scripts/overview-return.js  Scroll-to-top button
+scripts/platform-gate.js  Download gate, on a page with a direct Mac download
 images/                  Icons, screenshots, link preview
 og-image/                Link preview source and renderer, unpublished
 favicon.png, apple-touch-icon.png, CNAME, _config.yml
@@ -36,6 +37,12 @@ AGENTS.md, CLAUDE.md     Agent docs (CLAUDE.md symlinks to AGENTS.md), unpublish
 
 - `<button class="overview-return" id="overview-return" type="button" aria-label="Scroll to top">` with an up-arrow icon, before `</body>`, with an HTML comment saying not to rename it. Ad blockers' cosmetic filters hide `back-to-top`, `jump-to-top`, and `scroll-to-top`.
 - `overview-return.js` toggles `.visible` past `scrollY` 400 from a passive scroll listener and on load, and its click calls `scrollTo({ top: 0 })` with `behavior: 'smooth'`, or `'auto'` under `prefers-reduced-motion: reduce`.
+
+## Download gate
+
+- A direct Mac download is `#release-link`, an id as non-generic as the scroll-to-top button's, and ships both subtexts: `.download-label` and `.download-label-unavailable` ("Only for Macs").
+- `platform-gate.js`, copied verbatim from a sibling, runs as a classic, synchronous script in `<head>` so the inert state paints on the first frame: off a Mac it adds `not-macos` to `<html>` and makes `#release-link` an inert, `aria-disabled` link.
+- Under `.not-macos`, the unavailable subtext replaces the other and the button fades: `opacity: .45`, no shadow, `cursor: default`, `pointer-events: none`.
 
 ## CSS
 
