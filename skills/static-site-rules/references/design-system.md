@@ -41,14 +41,14 @@ Each theme sheet defines these on `:root`, after `color-scheme: light` or `dark`
 | Hero `h1` | `clamp(min(2.75rem, Nvw), 7vw, 4.25rem)`: N is the largest that fits the name on a 320px phone at 200% text and still gives `2.75rem` there at normal size (`20vw` for 7 or 8 letters, `13.75vw` for 10) | 700 | `-.035em` | 1.1 | `--title-gradient` |
 | Tagline | `clamp(1.05rem, 1.6vw, 1.2rem)`, max `36rem` (widened just enough to set a longer one in two lines on desktop, plus about `2rem` for other systems' fonts), `text-wrap: balance` | 400 | | 1.55 | `--secondary` |
 | Section `h2` | `clamp(1.9rem, 3.5vw, 2.6rem)`, `1rem` below its chip; floor `min(1.9rem, 10vw)` when a heading holds a word too long for a 320px phone at 200% text | 700 | `-.03em` | 1.1 | `--fg` |
-| Feature copy | `1.1rem`, `1rem` below the `h2` | 400 | | 1.6 | `--secondary` |
+| Feature copy | `1.1rem`, `1rem` below the `h2`, `text-wrap: pretty` | 400 | | 1.6 | `--secondary` |
 | Chip | `.875rem` | 600 | | | `--chip-fg` |
 | Button | `.95rem` | 600 | | | |
 | Footer | `.875rem` | 400 | | | `--secondary` |
 
 - Font stack in `--font`: `-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`, with `-webkit-font-smoothing: antialiased`.
 - The `h1` gradient applies inside `@supports ((-webkit-background-clip: text) or (background-clip: text))`, with `-webkit-text-fill-color: transparent`, over a plain `--fg` fallback.
-- `text-wrap: pretty` on paragraphs that sit side by side.
+- `text-wrap: pretty` on feature copy and on paragraphs that sit side by side, so no line ends on a lone word.
 
 ## Layout
 
@@ -56,7 +56,7 @@ Each theme sheet defines these on `:root`, after `color-scheme: light` or `dark`
 - `.section-hero`: `padding: 6rem 0 5rem`, centered text, `position: relative`, `overflow: hidden` then `overflow: clip`, so the glow never scrolls the page sideways.
 - `.section-feature`: `padding: 5rem 0`.
 - `.feature-split`: `max-width: 60rem`, two `1fr` columns, `gap: 4rem`, vertically centered. `.feature-text` is `max-width: 28rem`, centered in its column. `.feature-split-reverse` puts the text second; alternate it section by section.
-- `.section-centered`: centered text, its copy at `max-width: 36rem`, for full-width media.
+- `.section-centered`: centered text for full-width media, its copy at `max-width: 42rem` so it sets in two or three lines on desktop.
 - `.hero-media`: `max-width: 56rem`, `margin: 4rem auto 0`.
 
 ## Components
@@ -74,6 +74,7 @@ Each theme sheet defines these on `:root`, after `color-scheme: light` or `dark`
 - **Chips.** `.chip`: `inline-flex`, `padding: .3rem .85rem`, `border-radius: 999px`, `--chip-bg` fill, `box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .2), inset 0 1px 0 rgba(255, 255, 255, .3), 0 1px 2px rgba(0, 0, 0, .1), 0 .35rem .9rem -.35rem var(--chip-bg)`. On a page with section headlines the chip is a `<p>` above the `h2`; otherwise the chip can be the `h2`.
 - **Media frames.** `.media-frame`: `border-radius: 1rem`, `1px solid var(--hairline)`, `--surface` fill, `overflow: hidden`, `box-shadow: 0 2px 4px rgba(0, 0, 0, .08), 0 1.5rem 3rem -1rem var(--media-shadow), 0 3rem 6rem -2rem var(--media-shadow)`. Screenshots inside are square-cornered and `width: 100%`.
 - **Cards.** Glass, `border-radius: 1.25rem`, `padding: 1.75rem 1.25rem`, `box-shadow: 0 .5rem 1.5rem -.75rem var(--glass-shadow)`, lifting `translateY(-4px)` with a deeper shadow on hover and on `:focus-visible`, `transition: box-shadow .2s ease, transform .3s var(--spring)`. A whole card is one link. Choose column counts so rows stay full, and keep side-by-side descriptions about equal in length.
+- **Details.** Short facts that aren't links sit in a `.details` grid as plain columns between hairlines, not glass: three `1fr` columns, `row-gap: 2.5rem`, `max-width: 56rem`, centered. Each `.detail` is `padding: .25rem 1.5rem`, centered, with `border-left: 1px solid var(--hairline)` on `:not(:nth-child(3n + 1))`. Its `h2` is `1.05rem` with no top margin, normal tracking, `line-height: 1.5`, `--accent-text`; its paragraph `.95rem`, `.35rem` below, `--secondary`. Below `45em` the grid stacks to one column at `max-width: 28rem` with `row-gap: 0`, each `.detail` `padding: 1.25rem 0`, divided by a top hairline instead.
 - **Footer.** `.site-footer`: centered, `padding: 4rem 1.25rem calc(var(--fab-inset) + var(--fab-size) + 1rem)` so its text clears the scroll-to-top button. "Built by <author> • Open source (<license>)", `&#8226;` separators, links without underlines until hovered (then `--accent-text`), `aria-current="page"` on the current page's link. Data sources go on a second line.
 - **Scroll-to-top.** `.overview-return`: fixed `--fab-inset` from the bottom right, `--fab-size` glass circle, `box-shadow: 0 4px 16px var(--glass-shadow)`, `z-index: 300`. Hidden (`opacity: 0`, `visibility: hidden`, `translateY(.5rem)`) until the page scrolls past 400px, when `.visible` shows it; `scale(1.05)` on hover; `transition: opacity .25s ease, transform .3s var(--spring), visibility .25s ease`.
 - **Tables.** Hairline rules, `--surface` fill, uppercase `.85rem` headers in `--secondary`. Tables of three or more columns stack into one card per row on phones, labeling each cell from its `data-label`.

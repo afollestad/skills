@@ -5,8 +5,9 @@
 - Plain and concrete: say what the product does, in the reader's terms, with no hype. Second person in feature copy. Sentence case for headings.
 - **Tagline:** one or two sentences naming what it is, then what you do with it. "Turn recipes into a shopping list. Pick the servings, and check items off aisle by aisle."
 - **Meta description:** "<Name> is <what it is>: <what you do with it>." `og:description` is the same without "<Name> is".
-- **Chip:** one or two words naming the feature ("Servings", "Lists"). **Section `h2`:** a short headline about the benefit ("Shop once for the whole week"). **Feature copy:** one to three sentences.
+- **Chip:** one or two words naming the feature ("Servings", "Lists"). **Section `h2`:** a short headline about the benefit ("Shop once for the whole week"). **Feature copy:** one to three sentences; above full-width media, at most three lines on desktop, and two when they can.
 - **Cards side by side:** descriptions of about equal length, so they wrap to the same line count.
+- **Details:** three or six, each a fact worth its own column. Leave out what every product of its kind has, such as search or updating itself, and merge two that make one point. One sentence each, about equal in length.
 - **Alt text:** describe what's on screen, including its visible text and values, as one sentence a listener can picture. "The shopping list for two recipes, grouped by aisle, with butter and eggs checked off." Decorative images, including an icon beside the name, get `alt=""`.
 
 ## Comments and `AGENTS.md`
